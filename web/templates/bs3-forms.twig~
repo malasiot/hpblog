@@ -1,0 +1,72 @@
+{% macro start(method, action, enctype) %}
+ {% set method = method|upper %}
+
+    {%- if method in ["GET", "POST"] -%}
+        {% set form_method = method %}
+    {%- else -%}
+        {% set form_method = "POST" %}
+    {%- endif -%}
+
+    <form {%- if name %} name="{{ name }}" {%- endif %} method="{{ form_method|lower }}" {%- if action %} action="{{ action }}" {%- endif -%}
+    {%- for attrname, attrvalue in attr %} {{ attrname }}="{{ attrvalue }}" {%- endfor %}{% if enctype %} enctype="multipart/form-data" {%- endif %}>
+    {%- if form_method != method -%}
+        <input type="hidden" name="_method" value="{{ method }}" />
+    {%- endif -%}
+  
+{% endmacro %}
+
+
+{% macro end() %}
+</form>
+{% endmacro %}
+
+{% macro field_errors(errors) %}
+
+
+{% endmacro %}
+
+{% macro input(name, type, id, label, placeholder, value ) %}
+		
+<div class="form-group">
+  {% if label %}
+  	<label class="control-label" {%- if id %} for="{{id}}"{% endif %}>{{ label }}</label>
+  {% endif %}
+  	<input type="{{type}}" {%- if id %}id="{{id}}"{% endif %} name="{{name}}" class="form-control" {% if required %}required{% endif %} {% if disabled  %}disabled{% endif %} 
+		{% if placeholder %}placeholder="{{placeholder}}"{% endif %} {% for key, val in attrs %} {{key}}="{{val}}" {% endfor %} {% if value is defined %}value="{{value}}"{% endif %} >
+	
+</div>
+
+{% endmacro %}
+
+{% macro select(name, options, id, label, placeholder, value ) %}
+		
+<div class="form-group">
+  {% if label %}
+  	<label class="control-label" {%- if id %} for="{{id}}"{% endif %}>{{ label }}</label>
+  {% endif %}
+  	<select {% if id %}id="{{id}}" {% endif %} name={{name}} class="form-control" {% if required %}required{% endif %} {% if disabled %}disabled{% endif %} {% if placeholder %}placeholder={{placeholder}}{% endif %}{% for a in extra_attrs %}{{a.key}}="{{a.val}}" {% endfor %} {% if value %}value="{{value}}"{% endif %}>
+{% for key, option in options %}
+<option value="{{key}}" {% if key == value %}selected="selected"{% endif %}>{{option}}</option>
+{% endfor %}
+</select>
+	
+</div>
+
+{% endmacro %}
+
+{% macro upload(name, type, id, label, placeholder, value ) %}
+		
+<div class="form-group">
+  {% if label %}
+  	<label class="control-label" {%- if id %} for="{{id}}"{% endif %}>{{ label }}</label>
+  {% endif %}
+  	
+    <input type="file" {% if id %}id="{{id}}" name={{name}} class="filestyle"  {% if required %}required{% endif %} {% if disabled %}disabled{% endif %} {% if placeholder %}placeholder={{placeholder}}{% endif %} {% for a in extra_attrs %}{{a.key}}="{{a.val}}" {% endfor %} {% if value %}value="{{value}}"{% endif %} >
+</div>
+
+{% endmacro %}
+
+
+{% macro button(label, type) %}
+ <button type="{{type|default("submit")}}" class="btn btn-primary">{{label}}</button>
+{% endmacro %}

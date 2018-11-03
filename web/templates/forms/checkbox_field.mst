@@ -1,0 +1,6 @@
+<div class="checkbox">
+<label>
+<input type="checkbox" id="{{id}}" name={{name}} {{#disabled}}disabled{{/disabled}} {{#extra_attrs}}{{key}}="{{val}}" {{/extra_attrs}} {{#checked}}checked="{{checked}}"{{/checked}}>
+{{ label }}
+</label>
+</div>

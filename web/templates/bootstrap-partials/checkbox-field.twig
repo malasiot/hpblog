@@ -1,0 +1,6 @@
+<div class="checkbox">
+<label>
+<input type="checkbox" id="{{id}}" name={{name}} {% if disabled %}disabled{% endif %}} {% for a in extra_attrs %}{{a.key}}="{{a.val}}" {% endfor %} {% if checked %}checked="{{checked}}"{% endif %}>
+{{ label }}
+</label>
+</div>

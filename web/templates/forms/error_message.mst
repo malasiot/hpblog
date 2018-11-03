@@ -1,0 +1,8 @@
+{{#global_errors}}
+ <div class="alert alert-danger">
+        <a class="close" data-dismiss="alert">&times;</a>
+        {{#messages}}
+        <p>{{.}}</p>
+        {{/messages}}
+</div>
+{{/global_errors}}

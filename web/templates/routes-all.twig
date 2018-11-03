@@ -1,0 +1,32 @@
+{% extends 'layout' %}
+
+{% block contents %}
+    <div class="row">
+        <div class="col-md-12">
+			<div class="table-responsive" id="routes">
+				{% for mountain in mountains %}
+					<table class="table">
+  						<col width="50%">
+						<col width="50%">
+						<thead>
+							<tr><th colspan="2">{{mountain.name}}</th></tr>
+						</thead>
+						<tbody>
+
+						{% for row in mountain.routes|batch(2) %}
+						    <tr>
+							{% for route in row %}
+							    <td data-ref="{{route.id}}"><a href="view/{{route.id}}">{{route.title}}</a></td>
+							{% endfor %}
+						    </tr>
+						{% endfor %}
+						</tbody>
+  					</table>
+				{% endfor %}
+				</div> 
+            </div>
+        </div>
+    </div>
+   
+{% endblock %}
+

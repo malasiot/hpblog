@@ -1,0 +1,18 @@
+{ 
+	"admin" : {
+		"name": "Administrator",
+		"permissions": [ 
+			"users.*",
+			"pages.*"
+		]
+	},
+	"author" : {
+		"name": "Author", 
+		"permissions": [
+			"pages.edit.own",
+			"pages.delete.own",
+			"pages.new"
+		]
+	}
+}
+

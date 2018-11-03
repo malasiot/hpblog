@@ -1,0 +1,14 @@
+<div class="form-group {% if errors is defined%}has-error has-feedback{% endif %}">
+{% if label %}
+	<label class="control-label" for="{{id}}">{{ label }}</label>
+{% endif %}
+
+<select id="{{id}}" name={{name}} class="form-control" {% if required %}required{% endif %} {% if disabled %}disabled{% endif %} {% if placeholder %}placeholder={{placeholder}}{% endif %}{% for a in extra_attrs %}{{a.key}}="{{a.val}}" {% endfor %} {% if value %}value="{{value}}"{% endif %}>
+{% for option in options %}
+<option value="{{option.value}}" {% if option.select %}selected="selected"{% endif %}>{{option.label}}</option>
+{% endfor %}
+</select>
+
+{% include 'field-errors' %}
+
+</div>

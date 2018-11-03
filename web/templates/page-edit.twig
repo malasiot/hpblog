@@ -1,0 +1,70 @@
+{% extends 'layout' %}
+
+{% block contents %}
+	<ul class="nav nav-tabs">
+		<li class="active"><a href="#edit" data-toggle="tab">Page</a></li>
+		<li><a href="#preview" data-toggle="tab">Preview</a></li>
+	</ul>
+		
+            
+     <div class="tab-content clearfix" style="margin-top: 10px">
+          <div class="tab-pane active" id="edit">
+            	 <form id="edit-content" action="/page/publish/" method="POST">
+				  	<div class="form-group">
+					    <textarea class="mce-editable form-control" name="content" id="content">{{content}}</textarea>
+				   </div>
+				   <input type="hidden" name="id" id="page_id" value="{{id}}">
+				   <input type="hidden" name="slug" id="page_slug" value="{{slug}}">
+				   <p class="form-control-static" id="message"></p>
+				    
+					<button type="submit" class="btn btn-default">Publish</button>
+				</form> 
+	   		</div>
+		   		
+		   	 <div class="tab-pane" id="preview">
+            
+	   		</div>
+       </div>
+{% endblock %}
+
+{% block extra_footers %}
+
+        <script language="javascript" type="text/javascript" src="js/tinymce/js/tinymce/tinymce.min.js"></script>
+
+        <script type="text/javascript">
+  			$(document).ready(function() {
+  			  			
+  			
+	        {% include 'tinymce' %}
+	        
+	        $("#preview").html($("#content").val());
+	        
+	        $("#edit-content").submit(function(e) {
+	            var f = $(this) ;
+	          	
+            	$.ajax({
+                	 type: 'POST',
+                	 url: f.attr("action"),
+                	 dataType: 'json',
+	                 data: f.serialize(),
+    	             success: function (data, textStatus, request) {
+    	             	$('input[name=id]').val(data.id) ;
+    	                 $("#preview").html($("#content").val());
+    	                 $('#message').html(data.msg).addClass("alert alert-success") ;
+    	             },
+    	             error: function (req, status, error) {
+    	                 alert&("Error occurred!");
+    	             }
+    	        });
+    	        
+    	        e.preventDefault();
+
+    		});
+	        
+			
+		});
+		
+		</script>
+{% endblock %}
+
+

@@ -1,0 +1,57 @@
+{% extends 'layout' %}
+
+{% block extra_headers %}
+<style>
+	table { table-layout:fixed; }
+	th.col-title { width: 70%; }
+	th.col-mountain { width: 20%; }
+	th.col-action-buttons { width: 100px; }
+}
+</style>
+{% endblock %}
+
+{% block contents %}
+
+
+<div id="routes-list-view">
+
+{% include 'table-view' with { title: "Routes", columns: [{ key: 'title', label: 'Title'}, {key: 'mountain', label: 'Mountain'}] } only %}
+
+{% embed 'modal' with { id: "create-form", title: "Create New Route" } only %}
+{% block body %}
+{% import 'bs3-forms' as forms %}
+{{ forms.start() }}
+{{ forms.input('title', type='text', label='Title', required = true) }}
+{{ forms.select('mountain', mountains, label='Mountains', required = true) }}
+{{ forms.upload('gpx-file', label='GPX File', required = true) }}
+{{ forms.button('Submit') }}
+{{ forms.end() }}
+{% endblock %}
+{% endembed %}
+      
+{% embed 'modal' with { id: "edit-form", title: "Update Route" } %}
+{% block body %}
+{% import 'bs3-forms' as forms %}
+{{ forms.start() }}
+{{ forms.input('title', type='text', label='Title', required = true) }}
+{{ forms.select('mountain', mountains, label='Mountains', required = true) }}
+{{ forms.button('Submit') }}
+{{ forms.end() }}
+{% endblock %}
+{% endembed %}
+
+</div>
+{% endblock %}
+
+{% block extra_footers %}
+    <script src="js/tableview.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function() {
+
+               $('#routes-list-view').tableview({
+  					url:"routes/"
+  				}) ;
+			});
+		</script>
+{% endblock %}
+

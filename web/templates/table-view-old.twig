@@ -1,0 +1,86 @@
+<div class="panel panel-default panel-table">
+   	<div class="panel-heading">
+       	<div class="row">
+           	<div class="col col-xs-6">
+               <h3 class="panel-title">{{title}}</h3>
+           	</div>
+       		<div class="col col-xs-6 text-right">
+            	<button id = "new-record" type="button" class="btn btn-sm btn-primary btn-create">Create New</button>
+            </div>	
+       	</div>
+   	</div>
+	<div class="panel-body">
+		<table class="table table-striped table-bordered table-list">
+			<thead>
+				 <tr>
+				 {% for h in headers %}
+	    			    <th class="col-{{h.id}}">{{h.name}}</th>
+	    			 {% endfor %}   
+	    			 <th class="col-action-buttons" align="center"><em class="fa fa-cog"></em></th>
+	    		 </tr>
+			</thead>
+			<tbody id="data-grid">
+				{% for row in rows %}
+
+					<tr data-id="{{row.id}}">
+					
+					{% with row.data %}
+					{% for h in headers %}
+						<td>{{ render(h.widget, context()) }}</td>	
+					{% endfor %}		
+					{% endwith %}
+						<td align="center" style="width: 100px;">
+							<a id="edit-button" class="btn btn-default"><em class="fa fa-pencil"></em></a>
+                            <a id="delete-button" class="btn btn-danger"><em class="fa fa-trash"></em></a>
+						</td>
+
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+ 	<div class="panel-footer">
+		<div class="row">
+			<div class="col col-md-2 col-xs-6">Page {{page}} of {{total_pages}}</div>
+			<div class="col hidden-xs col-md-4">
+				<div style="display: inline-block;" class="hidden-xs" id="results-per-page">
+					<span>Results per page:</span>
+					<div class="btn-group" data-toggle="buttons">
+					  <label class="btn btn-default btn-sm">
+					    	<input type="radio" name="options" value="10" autocomplete="off">10</label>
+					  <label class="btn btn-default btn-sm">
+					    <input type="radio" name="options" value="20" autocomplete="off">20</label>
+					  <label class="btn btn-default btn-sm">
+					    <input type="radio" name="options" value="50" autocomplete="off">50</label>
+ 				      <label class="btn btn-default btn-sm">
+					    <input type="radio" name="options" value="100" autocomplete="off">100</label>
+					</div>
+					
+				</div>
+			</div>
+            <div class="col col-xs-6" id="pager">
+    	        <ul class="pagination pagination-sm hidden-xs pull-right" data-total-pages={{total_pages}}>
+   		 		{% with pager %}
+    	        	{% if first is defined %} <li {% if first.disabled %}class="disabled"{% endif %}><a href="#" data-page="{{first.page}}" title="First"><i class="fa fa-backward" aria-hidden="true"></i></a></li> {% endif %}
+    	        	{% if previous is defined %} <li {% if previous.disabled %}class="disabled"{% endif %}><a href="#" data-page="{{previous.page}}" title="Previous"><i class="fa fa-caret-left" aria-hidden="true"></i></a></li> {% endif %}
+    	        	
+					{% for page in pages %}
+						{% if page.active %}<li class="active">	{% else %}	<li> {% endif %}
+						 <a href="#" data-page="{{page.page}}" title="Jump to page {{page.page}}">{{page.text}}</a>
+					 </li>
+		 		 	{% endfor %}
+		 		 	{% if next is defined %} <li {% if next.disabled %}class="disabled"{% endif %}><a href="#" data-page="{{next.page}}" title="Next"><i class="fa fa-caret-right" aria-hidden="true"></i></a></li> {% endif %}
+    	        	{% if last is defined %} <li {% if last.disabled %}class="disabled"{% endif %}><a href="#" data-page="{{last.page}}" title="Last"><i class="fa fa-forward" aria-hidden="true"></i></a></li> {% endif %}
+				{% endwith %}
+				</ul>
+				<ul class="pagination pagination-sm visible-xs pull-right" data-total-pages={{total_pages}}>
+   		 		{% with pager %}
+    	        	{% if previous is defined%} <li {% if previous.disabled %}class="disabled"{% endif %}><a href="#" data-page="{{previous.page}}" title="Previous"><i class="fa fa-caret-left" aria-hidden="true"></i></a></li> {% endif %}
+		 		 	{% if next is defined %} <li {% if next.disabled %}class="disabled"{% endif %}><a href="#" data-page="{{next.page}}" title="Next"><i class="fa fa-caret-right" aria-hidden="true"></i></a></li> {% endif %}
+				{% endwith %}
+				</ul>	
+            </div>
+       </div>
+   </div>
+</div>
+

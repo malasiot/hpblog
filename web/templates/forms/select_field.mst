@@ -1,0 +1,14 @@
+<div class="form-group {{#errors}}has-error has-feedback{{/errors}}">
+{{# label }}
+	<label class="control-label" for="{{id}}">{{ label }}</label>
+{{/label }}
+
+<select id="{{id}}" name={{name}} class="form-control" {{#required}}required{{/required}} {{#disabled}}disabled{{/disabled}} {{#placeholder}}placeholder={{/placeholder}}{{#extra_attrs}}{{key}}="{{val}}" {{/extra_attrs}} {{#value}}value="{{value}}"{{/value}}>
+{{#options}}
+<option value="{{key}}">{{val}}</option>
+{{/options}}
+</select>
+
+{{> field_errors }}
+
+</div>

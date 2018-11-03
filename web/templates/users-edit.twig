@@ -1,0 +1,52 @@
+{% extends 'layout' %}
+
+{% block contents %}
+
+<div id="users-list-view">
+
+{% include 'table-view' with { title: "Users", columns: [{ key: 'username', label: 'Username'}, {key: 'role', label: 'Role'}] } only %}
+
+{% embed 'modal' with { id: "create-form", title: "Create New User", roles: roles } only %}
+{% block body %}
+{% import 'bs3-forms' as forms %}
+{{ forms.start() }}
+{{ forms.input('username', type='text', label='Username', required = true) }}
+{{ forms.input('password', type='password', label='Password', required = true) }}
+{{ forms.input('cpassword', type='password', label='Confirm Password', required = true) }}
+{{ forms.select('role', roles, label='Role', required = true) }}
+{{ forms.button('Submit') }}
+{{ forms.end() }}
+{% endblock %}
+{% endembed %}
+
+{% embed 'modal' with { id: "edit-form", title: "Update User", roles: roles } only %}
+{% block body %}
+{% import 'bs3-forms' as forms %}
+{{ forms.start() }}
+{{ forms.input('password', type='password', label='Password', required = true) }}
+{{ forms.input('cpassword', type='password', label='Confirm Password', required = true) }}
+{{ forms.select('role', roles, label='Role', required = true) }}
+{{ forms.button('Submit') }}
+{{ forms.end() }}
+{% endblock %}
+{% endembed %}
+
+</div>
+{% endblock %}
+
+{% block extra_footers %}
+    <script src="js/tableview.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function() {
+			   var roles = {{roles|to_json}} ;
+               $('#users-list-view').tableview({
+  					url:"users/", filters: { role: 
+  						function(row) { 
+  							return roles[row.data.role]; 
+  						}
+  					 }
+  				}) ;
+			});
+		</script>
+{% endblock %}
+

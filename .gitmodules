@@ -1,0 +1,9 @@
+[submodule "libs/twig"]
+	path = libs/twig
+	url = git@github.com:malasiot/twig.git
+[submodule "libs/wsrv"]
+	path = libs/wsrv
+	url = git@github.com:malasiot/wsrv.git
+[submodule "libs/xdb"]
+	path = libs/xdb
+	url = git@github.com:malasiot/xdb.git

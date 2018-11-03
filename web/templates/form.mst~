@@ -1,0 +1,7 @@
+<form {{#action}}action="{{.}}"{{/action}} {{#method}method="{{.}}"{{/method}} {{#enctype}action="{{.}}"{{/enctype}}>
+	{{#data}}
+		{{> form-base}}
+		<button type="submit" class="btn btn-default" name="{{button.name}}">{{button.title}}</button>  
+	{{/data}}
+</form> 
+

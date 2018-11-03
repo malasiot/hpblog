@@ -1,0 +1,48 @@
+{% extends 'layout' %}
+
+{% block contents %}
+
+<div id="pages-list-view">
+
+{% include 'table-view' with { title: "Pages", columns: [{ key: 'title', label: 'Title'}, {key: 'slug', label: 'Slug'}] } only %}
+
+{% embed 'modal' with { id: "create-form", title: "Create New Page" } only %}
+{% block body %}
+{% import 'bs3-forms' as forms %}
+{{ forms.start() }}
+{{ forms.input('title', type='text', label='Title', required = true) }}
+{{ forms.input('slug', type='text', label='Slug', required = true) }}
+{{ forms.button('Submit') }}
+{{ forms.end() }}
+{% endblock %}
+{% endembed %}
+
+{% embed 'modal' with { id: "edit-form", title: "Update Page" } only %}
+{% block body %}
+{% import 'bs3-forms' as forms %}
+{{ forms.start() }}
+{{ forms.input('title', type='text', label='Title', required = true) }}
+{{ forms.input('slug', type='text', label='Slug', required = true) }}
+{{ forms.button('Submit') }}
+{{ forms.end() }}
+{% endblock %}
+{% endembed %}
+
+</div>
+{% endblock %}
+
+{% block extra_footers %}
+    <script src="js/tableview.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function() {
+			     $('#pages-list-view').tableview({
+  					url:"pages/", filters: { role: 
+  						function(row) { 
+  							return roles[row.data.role]; 
+  						}
+  					 }
+  				}) ;
+			});
+		</script>
+{% endblock %}
+

@@ -1,0 +1,8 @@
+{ "items" : [ 
+	{ "href" : "page/home", "label": "Αρχική" },
+	{ "href" : "", "label": "Διαδρομές" },
+	{ "href" : "map", "label": "Χάρτης" },
+	{ "href" : "page/contact", "label": "Επικοινωνία" }
+	]
+}	
+

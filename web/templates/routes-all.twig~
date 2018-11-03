@@ -1,0 +1,52 @@
+{% extends 'layout' %}
+
+{% block contents %}
+    <div class="row">
+        <div class="col-md-12">
+			<div class="table-responsive" id="routes">
+				{% for mountain in mountains %}
+					<table class="table">
+  						<col width="50%">
+						<col width="50%">
+						<thead>
+							<tr><th colspan="2">{{mountain.name}}</th></tr>
+						</thead>
+						<tbody>
+
+						{% for row in mountain.routes|batch(2) %}
+						    <tr>
+							{% for route in row %}
+							    <td data-ref="{{route.id}}"><a href="view/{{route.id}}">{{route.title}}</a></td>
+							{% endfor %}
+						    </tr>
+						{% endfor %}
+{#						
+						{% for route_idx in range(0, (mountain.routes|length)/2) %}
+						<tr>
+							{% set route = mountain.routes[2*route_idx] %}
+								<td data-ref="{{route.id}}"><a href="view/{{route.id}}">{{route.title}}</a></td>
+							{% endset %}
+							{% set route = mountain.routes[2*route_idx+1] %}
+								<td data-ref="{{route.id}}"><a href="view/{{route.id}}">{{route.title}}</a></td>
+							{% endset %}
+						</tr>
+						{% endfor %}	
+						{% if  (mountain.routes|length) % 2 %}
+							<tr>
+							{% set route = mountain.routes|last %}
+								<td data-ref="{{route.id}}"><a href="view/{{route.id}}">{{route.title}}</a></td>
+							{% endset %}
+							</tr>
+						{% endif %}
+
+						#}
+						</tbody>
+  					</table>
+				{% endfor %}
+				</div> 
+            </div>
+        </div>
+    </div>
+   
+{% endblock %}
+

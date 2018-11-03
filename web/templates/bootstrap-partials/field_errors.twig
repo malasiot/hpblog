@@ -1,0 +1,10 @@
+{% if errors %}
+  <span class="glyphicon glyphicon-remove form-control-feedback"></span>       
+  
+  {% with errors %}
+  	{% for msg in messages %}
+		  <span class="help-block"><p>{{msg}}</p></span>
+	{% endfor %}
+  {% endwith %}		     
+{% endif %}
+

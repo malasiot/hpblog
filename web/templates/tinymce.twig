@@ -1,0 +1,15 @@
+tinyMCE.init({
+	theme : "modern",
+   	mode: "exact",
+	plugins: [ "code anchor link" ],
+    selector : ".mce-editable",
+    entity_encoding: "raw",
+	toolbar: [
+    'undo redo | styleselect | bold italic | link image | alignleft aligncenter alignright'
+  	],
+   setup: function (editor) {
+        editor.on('change', function () {
+            tinymce.triggerSave();
+        });
+    }
+});

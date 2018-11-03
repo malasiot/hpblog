@@ -1,0 +1,6 @@
+{# no dropdown support #}
+<ul class="nav navbar-nav">
+{% for item in items %}}
+	<li><a href="{{item.href}}" {% if item.active %} class="active" {% endif %}>{{item.label}}</a></li>
+{% endfor %}
+</ul>

@@ -1,0 +1,11 @@
+<div class="form-group {% if errors is defined %}has-error has-feedback{% endif %}">
+
+{% if label %}
+	<label class="control-label" for="{{id}}">{{ label }}</label>
+{% endif %}
+
+<input type="{{type}}" id="{{id}}" name={{name}} class="filestyle"  {% if required %}required{% endif %} {% if disabled %}disabled{% endif %} {% if placeholder %}placeholder={{placeholder}}{% endif %} {% for a in extra_attrs %}{{a.key}}="{{a.val}}" {% endfor %} {% if value %}value="{{value}}"{% endif %} >
+
+{% include 'field-errors' %}
+
+</div>

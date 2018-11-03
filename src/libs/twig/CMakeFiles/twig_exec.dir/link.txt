@@ -1,0 +1,1 @@
+/usr/bin/c++      CMakeFiles/twig_exec.dir/main.cpp.o  -o twig_exec -rdynamic libtwig.so -Wl,-rpath,/home/malasiot/source/hpblog/src/libs/twig 
