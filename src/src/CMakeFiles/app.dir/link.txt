@@ -1,1 +1,0 @@
-/usr/bin/c++      CMakeFiles/app.dir/app.cpp.o  -o app -rdynamic -lwsrv ../libs/twig/libtwig.so ../libs/xdb/src/libxdb.so -lsqlite3 -lpq -ldl -lz -lpthread -Wl,-rpath,/home/malasiot/source/hpblog/src/libs/twig:/home/malasiot/source/hpblog/src/libs/xdb/src 

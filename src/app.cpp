@@ -11,6 +11,13 @@
 #include <mutex>
 #include <iostream>
 
+#include "app_context.hpp"
+#include "auth.hpp"
+#include "page_view.hpp"
+#include "page_controller.hpp"
+#include "users_controller.hpp"
+#include "login.hpp"
+
 using namespace ws ;
 using namespace twig ;
 using namespace xdb ;
@@ -72,15 +79,22 @@ public:
             Connection con("sqlite:db=" + root_ + "/routes.sqlite") ; // establish connection with database
 
 
+            AppContext ctx(con, session, req, resp, engine_) ;
+
+            DefaultAuthorizationModel auth(Variant::fromJSONFile(root_ + "templates/acm.json")) ;
+            User user(ctx, auth) ; // setup authentication
+
+            PageView page(user, Variant::fromJSONFile(root_ + "templates/menu.json")) ; // global page data
+
+            PageContext page_ctx(ctx, user, page) ;
 
             Dictionary attrs ;
-            if ( req.matches("GET", R"(/user/{id:\d+}/{action:show|hide}/)", attrs) ) {
 
-                resp.write("hello " + attrs["id"]) ;
+            if ( PageController(page_ctx).dispatch() ) return ;
+            if ( UsersController(page_ctx).dispatch() ) return ;
+            if ( LoginController(page_ctx).dispatch() ) return ;
 
-                session.data().add("id", attrs["id"]) ;
-                return ;
-            } else if ( resp.serveStaticFile(root_, req.getPath()) ) {
+            if ( resp.serveStaticFile(root_, req.getPath()) ) {
                 return ;
             } else {
                 resp.stockReply(Response::not_found) ;

@@ -1,1 +1,0 @@
-/usr/bin/c++      CMakeFiles/test_server.dir/test_server.cpp.o  -o test_server -rdynamic ../src/libws_http_server.so -lcryptopp -lsqlite3 -lz -Wl,-rpath,/home/malasiot/source/hpblog/src/libs/wsrv/src 

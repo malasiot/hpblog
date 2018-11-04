@@ -1,6 +1,0 @@
-/home/malasiot/source/hpblog/src/src/CMakeFiles/app.dir
-/home/malasiot/source/hpblog/src/libs/twig/CMakeFiles/twig_exec.dir
-/home/malasiot/source/hpblog/src/libs/wsrv/src/CMakeFiles/ws_http_server.dir
-/home/malasiot/source/hpblog/src/libs/xdb/src/CMakeFiles/xdb.dir
-/home/malasiot/source/hpblog/src/libs/wsrv/test/CMakeFiles/test_server.dir
-/home/malasiot/source/hpblog/src/libs/twig/CMakeFiles/twig.dir
