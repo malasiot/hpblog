@@ -1,7 +1,5 @@
 {% macro start(method, action, enctype) %}
- {% set method = method|upper %}
-
-    {%- if method in ["GET", "POST"] -%}
+    {%- if method is defined || method in ["GET", "POST"] -%}
         {% set form_method = method %}
     {%- else -%}
         {% set form_method = "POST" %}

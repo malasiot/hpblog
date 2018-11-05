@@ -76,8 +76,7 @@ public:
         try {
             Session &session = req.getSession() ;
 
-            Connection con("sqlite:db=" + root_ + "/routes.sqlite") ; // establish connection with database
-
+            Connection con("sqlite:db=" + root_ + "/blog.sqlite") ; // establish connection with database
 
             AppContext ctx(con, session, req, resp, engine_) ;
 
@@ -100,7 +99,12 @@ public:
                 resp.stockReply(Response::not_found) ;
             }
         }
+        catch ( HttpResponseException &e ) {
+
+            resp.stockReply(e.code_) ;
+        }
         catch ( std::runtime_error &e ) {
+            cout << e.what() << endl ;
             resp.stockReply(Response::internal_server_error) ;
         }
     }
@@ -118,7 +122,7 @@ int main(int argc, char *argv[]) {
 
     HttpServer server("127.0.0.1", "5000") ;
 
-    const string root = "/home/malasiot/source/hpblog/data/" ;
+    const string root = "/home/malasiot/source/hpblog/web/" ;
 
     server.setHandler(new App(root)) ;
     server.setSessionManager(new FileSystemSessionManager("/tmp/session.sqlite")) ;
