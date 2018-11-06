@@ -152,7 +152,8 @@ void PageController::remove()
 
 bool PageController::dispatch()
 {
-    if ( !starts_with(request_.getPath(), "/page") ) return false ;
+    const auto &path = request_.getPath() ;
+    if ( path != "/" && !starts_with(path, "/page") ) return false ;
 
     Dictionary attributes ;
 
@@ -195,6 +196,10 @@ bool PageController::dispatch()
     }
     else if ( request_.matches("GET", "/page/{id}/", attributes) ) {
         show(attributes["id"]) ;
+        return true ;
+    }
+    else if ( request_.matches("GET", "") ) {
+        show("home") ;
         return true ;
     }
     else
