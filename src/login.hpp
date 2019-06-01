@@ -12,12 +12,6 @@ public:
     void login() ;
     void logout() ;
 
-protected:
-    // sanitize and verify username/password
-
-    bool sanitizeUserName(std::string &username) ;
-    bool sanitizePassword(std::string &password) ;
-
 private:
     PageContext &ctx_ ;
 };

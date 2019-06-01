@@ -110,14 +110,14 @@ public:
     }
 
     void setSessionManager(SessionManager *sm) {
-        session_manager_ = sm ;
+        session_manager_.reset(sm) ;
     }
 
 private:
 
     string root_ ;
     TemplateRenderer engine_ ;
-    SessionManager *session_manager_ ;
+    std::unique_ptr<SessionManager> session_manager_ ;
 };
 
 
@@ -127,11 +127,10 @@ int main(int argc, char *argv[]) {
 
     const string root = "/home/malasiot/source/hpblog/web/" ;
 
-    std::unique_ptr<App> app(new App(root)) ;
+    App *app = new App(root) ;
 
-    std::unique_ptr<SessionManager> session_manager(new SQLite3SessionManager("/tmp/session.sqlite")) ;
-    app->setSessionManager(session_manager.get()) ;
+    app->setSessionManager(new SQLite3SessionManager("/tmp/session.sqlite")) ;
 
-    server.setHandler(app.get()) ;
+    server.setHandler(app) ;
     server.run() ;
 }
