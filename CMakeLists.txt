@@ -10,7 +10,8 @@ add_definitions( -std=c++11 )
 include_directories(
     "libs/twig/include/"
     "libs/wsrv/include/"
-    "libs/xdb/include/")
+    "libs/xdb/include/"
+    "libs/3rdpartyy/asio/include")
 
 add_subdirectory(libs/twig)
 add_subdirectory(libs/wsrv) 

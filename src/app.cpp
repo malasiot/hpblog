@@ -2,7 +2,7 @@
 #include <ws/request_handler.hpp>
 #include <ws/session.hpp>
 #include <ws/exceptions.hpp>
-#include <ws/fs_session_manager.hpp>
+#include <ws/sqlite3_session_manager.hpp>
 
 #include <twig/renderer.hpp>
 #include <twig/functions.hpp>
@@ -74,7 +74,7 @@ public:
         GZipFilter gzip(req, resp) ;
 
         try {
-            Session &session = req.getSession() ;
+            Session session(*session_manager_, req, resp) ;
 
             Connection con("sqlite:db=" + root_ + "/blog.sqlite") ; // establish connection with database
 
@@ -109,23 +109,29 @@ public:
         }
     }
 
+    void setSessionManager(SessionManager *sm) {
+        session_manager_ = sm ;
+    }
+
 private:
 
     string root_ ;
     TemplateRenderer engine_ ;
-
+    SessionManager *session_manager_ ;
 };
 
 
 int main(int argc, char *argv[]) {
 
-
     HttpServer server("127.0.0.1", "5000") ;
 
     const string root = "/home/malasiot/source/hpblog/web/" ;
 
-    server.setHandler(new App(root)) ;
-    server.setSessionManager(new FileSystemSessionManager("/tmp/session.sqlite")) ;
+    std::unique_ptr<App> app(new App(root)) ;
 
+    std::unique_ptr<SessionManager> session_manager(new SQLite3SessionManager("/tmp/session.sqlite")) ;
+    app->setSessionManager(session_manager.get()) ;
+
+    server.setHandler(app.get()) ;
     server.run() ;
 }
