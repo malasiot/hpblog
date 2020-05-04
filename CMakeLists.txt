@@ -11,10 +11,12 @@ include_directories(
     "libs/twig/include/"
     "libs/wsrv/include/"
     "libs/xdb/include/"
-    "libs/3rdpartyy/asio/include")
+    "libs/3rdparty/asio/include")
 
 add_subdirectory(libs/twig)
 add_subdirectory(libs/wsrv) 
 add_subdirectory(libs/xdb)
 
 add_subdirectory(src)
+
+add_subdirectory(tools)
