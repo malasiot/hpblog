@@ -5,6 +5,8 @@
 #include <memory>
 #include <vector>
 
+#include <ws/mime.hpp>
+
 namespace ws {
 
 namespace detail {
@@ -14,6 +16,7 @@ class Socket ;
 class MailAddress {
 public:
 
+    MailAddress() = default ;
     MailAddress(const std::string &address, const std::string name = std::string()): address_(address), name_(name) {}
 
     std::string format() const ;
@@ -27,7 +30,7 @@ private:
 class SMTPMessage {
   public:
 
-    SMTPMessage() ;
+    SMTPMessage() = default ;
 
     SMTPMessage &setSender(const MailAddress &sender) {
         sender_ = sender ;
@@ -80,6 +83,12 @@ class SMTPMessage {
         return *this ;
     }
 
+    SMTPMessage &setContent(const MimePart *content) {
+        content_ = content ;
+        return *this ;
+    }
+
+
     const MailAddress &sender() const { return sender_ ; }
     const MailAddress &from() const { return from_ ; }
     const MailAddress &reply_to() const { return reply_to_ ; }
@@ -96,9 +105,11 @@ private:
     std::string format_subject() const;
     std::string format_content() const;
 
-    std::string subject_, body_ ;
+    std::string subject_ ;
     MailAddress sender_, from_, reply_to_ ;
     std::vector<MailAddress> recipients_, cc_recipients_, bcc_recipients_ ;
+
+    const MimePart *content_ ;
 
 };
 
@@ -144,10 +155,22 @@ protected:
     bool permanent_negative(int status);
     bool positive_completion(int status);
 
+    struct ResponseLine {
+        int status() const { return status_ ; }
+        bool isLast() const { return is_last_ ; }
+
+        int status_ ;
+        bool is_last_ ;
+        std::string msg_ ;
+    };
+
+    ResponseLine waitForResponse() ;
 
 private:
+
+
     std::unique_ptr<detail::Socket> socket_ ;
-    std::string src_hostname_ ;
+    std::string src_hostname_ = "mail.client.org" ;
 };
 
 class SMTPError: public std::runtime_error {

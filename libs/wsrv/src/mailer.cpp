@@ -3,7 +3,6 @@
 #include "smtp_socket.hpp"
 #include "base64.hpp"
 
-
 #include <iostream>
 
 using namespace std ;
@@ -17,12 +16,19 @@ SMTPMailer::SMTPMailer(const std::string &hostname, unsigned port): socket_(new 
 }
 
 SMTPMailer::~SMTPMailer() {
+    try
+    {
+        socket_->send("QUIT");
+    }
+    catch (...)
+    {
+    }
 }
 
 void SMTPMailer::connect() {
-    string line = socket_->receive();
-    tuple<int, bool, string> tokens = parse_line(line);
-    if (std::get<0>(tokens) != 220)
+    auto r = waitForResponse() ;
+
+    if ( r.status() != 220 )
         throw SMTPError("Connection rejection.");
 }
 
@@ -45,62 +51,58 @@ inline bool SMTPMailer::positive_completion(int status) {
     return status / 100 == smtp_status_t::POSITIVE_COMPLETION;
 }
 
+SMTPMailer::ResponseLine SMTPMailer::waitForResponse()
+{
+    string line = socket_->receive();
+
+    try {
+        if ( line.size() < 4 ) throw SMTPError("Response message too short") ;
+
+        return { stoi(line.substr(0, 3)), line.at(3) != '-',  line.substr(4) } ;
+    }
+    catch ( out_of_range & ) {
+        throw SMTPError("Error parsing response message") ;
+    }
+    catch (invalid_argument&) {
+        throw SMTPError("Error parsing response message") ;
+    }
+}
+
 void SMTPMailer::auth_login(const string& username, const string& password) {
     socket_->send("AUTH LOGIN");
-    string line = socket_->receive();
-    tuple<int, bool, string> tokens = parse_line(line);
-    if (std::get<1>(tokens) && !positive_intermediate(std::get<0>(tokens)))
+    auto r = waitForResponse() ;
+    if ( r.isLast() && !positive_intermediate(r.status()) )
         throw SMTPError("Authentication rejection.");
 
     socket_->send(base64_encode(username));
-    line = socket_->receive();
-    tokens = parse_line(line);
-    if (std::get<1>(tokens) && !positive_intermediate(std::get<0>(tokens)))
+    r = waitForResponse() ;
+    if ( r.isLast() && !positive_intermediate(r.status()) )
         throw SMTPError("Username rejection.");
 
     socket_->send(base64_encode(password));
-    line = socket_->receive();
-    tokens = parse_line(line);
-    if (std::get<1>(tokens) && !positive_completion(std::get<0>(tokens)))
+    r = waitForResponse() ;
+    if ( r.isLast() && !positive_completion(r.status()) )
         throw SMTPError("Password rejection.");
-}
-
-tuple<int, bool, string> SMTPMailer::parse_line(const string& line) {
-    try {
-        return make_tuple(stoi(line.substr(0, 3)), (line.at(3) == '-' ? false : true), line.substr(4));
-    }
-    catch ( out_of_range & ) {
-        throw SMTPError("Parsing server failure.");
-    }
-    catch (invalid_argument&) {
-        throw SMTPError("Parsing server failure.");
-    }
 }
 
 void SMTPMailer::ehlo()
 {
     socket_->send("EHLO " + src_hostname_);
-    string line = socket_->receive();
-    tuple<int, bool, string> tokens = parse_line(line);
 
-    while (!std::get<1>(tokens))
-    {
-        line = socket_->receive();
-        tokens = parse_line(line);
-    }
+    ResponseLine r ;
 
-    if (!positive_completion(std::get<0>(tokens)))
-    {
+    do  {
+        r = waitForResponse() ;
+    } while ( !r.isLast() ) ;
+
+    if ( !positive_completion(r.status()) ) {
         socket_->send("HELO " + src_hostname_);
 
-        line = socket_->receive();
-        tokens = parse_line(line);
-        while (!std::get<1>(tokens))
-        {
-            line = socket_->receive();
-            tokens = parse_line(line);
-        }
-        if (!positive_completion(std::get<0>(tokens)))
+        do  {
+            r = waitForResponse() ;
+        } while ( !r.isLast() ) ;
+
+        if ( !positive_completion( r.status() ) )
             throw SMTPError("Initial message rejection.");
     }
 }
@@ -131,9 +133,10 @@ void SMTPMailer::authenticate(const string &username, const string &password, SM
 void SMTPMailer::start_tls()
 {
     socket_->send("STARTTLS");
-    string line = socket_->receive();
-    tuple<int, bool, string> tokens = parse_line(line);
-    if (std::get<1>(tokens) && std::get<0>(tokens) != 220)
+
+    auto r = waitForResponse() ;
+
+    if ( r.isLast() && r.status() != 220)
         throw SMTPError("Start tls refused by server.");
 
     switch_to_ssl();
@@ -147,50 +150,47 @@ void SMTPMailer::switch_to_ssl() {
 void SMTPMailer::submit(const SMTPMessage& msg)
 {
     socket_->send("MAIL FROM: <" + msg.sender().address() + ">");
-    string line = socket_->receive();
-    tuple<int, bool, string> tokens = parse_line(line);
-    if (std::get<1>(tokens) && !positive_completion(std::get<0>(tokens)))
+    auto r = waitForResponse() ;
+
+    if ( r.isLast() && !positive_completion(r.status()))
         throw SMTPError("Mail sender rejection.");
 
-    for (const auto& rcpt : msg.recipients() )
-    {
+    for (const auto& rcpt : msg.recipients() ) {
         socket_->send("RCPT TO: <" + rcpt.address() + ">");
-        line = socket_->receive();
-        tokens = parse_line(line);
-        if (!positive_completion(std::get<0>(tokens)))
+        r = waitForResponse() ;
+
+        if ( !positive_completion(r.status()) )
             throw SMTPError("Mail recipient rejection.");
     }
 
-    for (const auto& rcpt : msg.cc_recipients())
-    {
+    for (const auto& rcpt : msg.cc_recipients()) {
         socket_->send("RCPT TO: <" + rcpt.address() + ">");
-        line = socket_->receive();
-        tokens = parse_line(line);
-        if (!positive_completion(std::get<0>(tokens)))
+        r = waitForResponse() ;
+
+        if ( !positive_completion(r.status()) )
             throw SMTPError("Mail cc recipient rejection.");
     }
 
-    for (const auto& rcpt : msg.bcc_recipients())
-    {
+    for (const auto& rcpt : msg.bcc_recipients()) {
         socket_->send("RCPT TO: <" + rcpt.address() + ">");
-        line = socket_->receive();
-        tokens = parse_line(line);
-        if (!positive_completion(std::get<0>(tokens)))
+        r = waitForResponse() ;
+
+        if ( !positive_completion(r.status()) )
             throw SMTPError("Mail bcc recipient rejection.");
     }
 
     socket_->send("DATA");
-    line = socket_->receive();
-    tokens = parse_line(line);
-    if (!positive_intermediate(std::get<0>(tokens)))
+    r = waitForResponse() ;
+
+    if (!positive_intermediate(r.status()))
         throw SMTPError("Mail message rejection.");
 
     string msg_str;
     msg.format(msg_str, true);
     socket_->send(msg_str + "\r\n.");
-    line = socket_->receive();
-    tokens = parse_line(line);
-    if (!positive_completion(std::get<0>(tokens)))
+    r = waitForResponse() ;
+
+    if ( !positive_completion(r.status()) )
         throw SMTPError("Mail message rejection.");
 }
 
@@ -210,7 +210,7 @@ string MailAddress::format() const
         name_formatted += "\"" + name_ + "\"" ;
 
     if ( !address_.empty() )
-       addr = "<" + address_ + ">" ;
+        addr = "<" + address_ + ">" ;
 
     string addr_name = ( name_formatted.empty() ? addr : name_formatted + (addr.empty() ? "" : " " + addr));
 
@@ -219,8 +219,8 @@ string MailAddress::format() const
 
 void SMTPMessage::format(string &msg, bool dot_escape) const
 {
-     msg += format_header();
-     msg += format_content(dot_escape) ;
+    msg += format_header();
+    msg += format_content() ;
 }
 
 string SMTPMessage::format_header() const
@@ -270,6 +270,11 @@ string SMTPMessage::format_address_list(const std::vector<MailAddress> &a) const
 string SMTPMessage::format_subject() const
 {
     return subject_ ;
+}
+
+string SMTPMessage::format_content() const
+{
+    return content_->format() ;
 }
 
 
