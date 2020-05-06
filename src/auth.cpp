@@ -10,7 +10,7 @@ using namespace xdb ;
 using namespace ws ;
 using namespace twig ;
 
-void User::persist(const std::string &user_name, const std::string &user_id, const std::string &user_role, bool remember_me)
+void UserModel::persist(const std::string &user_name, const std::string &user_id, const std::string &user_role, bool remember_me)
 {
     // fill in session cache with user information
 
@@ -42,7 +42,7 @@ void User::persist(const std::string &user_name, const std::string &user_id, con
 
 }
 
-void User::forget()
+void UserModel::forget()
 {
     if ( check() ) {
 
@@ -74,19 +74,19 @@ static bool hash_equals(const std::string &query, const std::string &stored) {
     return ncount == 0 ;
 }
 
-string User::userName() const {
+string UserModel::userName() const {
     return ctx_.session_.get("user_name") ;
 }
 
-string User::userId() const {
+string UserModel::userId() const {
     return ctx_.session_.get("user_id") ;
 }
 
-string User::userRole() const {
+string UserModel::userRole() const {
     return ctx_.session_.get("user_role") ;
 }
 
-string User::token() const
+string UserModel::token() const
 {
     string session_token = ctx_.session_.get("token") ;
     if ( session_token.empty() ) {
@@ -99,7 +99,7 @@ string User::token() const
 
 
 
-bool User::check() const
+bool UserModel::check() const
 {
     if ( ctx_.session_.contains("user_name") ) return true ;
 
@@ -142,17 +142,17 @@ bool User::check() const
     return false ;
 }
 
-bool User::userNameExists(const string &username)
+bool UserModel::userNameExists(const string &username)
 {
     QueryResult res = ctx_.con_.query("SELECT id FROM 'users' WHERE name = ? LIMIT 1;", username) ;
     return res.next() ;
 }
 
-bool User::verifyPassword(const string &query, const string &stored) {
+bool UserModel::verifyPassword(const string &query, const string &stored) {
     return passwordVerify(query, decodeBase64(stored)) ;
 }
 
-void User::load(const string &username, string &id, string &password, string &role)
+void UserModel::load(const string &username, string &id, string &password, string &role)
 {
     QueryResult res = ctx_.con_.query("SELECT u.id AS id, u.password as password, r.role_id as role FROM users AS u JOIN user_roles AS r ON r.user_id = u.id WHERE name = ? LIMIT 1;", username) ;
 
@@ -210,7 +210,7 @@ static bool match_permissions(const string &glob, const string &action) {
     return res ;
 }
 
-bool User::can(const string &action) const {
+bool UserModel::can(const string &action) const {
     string role = userRole() ;
     vector<string> permissions  = auth_.getPermissions(role) ;
     for( uint i=0 ; i<permissions.size() ; i++ ) {
@@ -237,24 +237,24 @@ static string strip_all_tags(const string &str, bool remove_breaks = false) {
     return trim_copy(res) ;
 }
 
-string User::sanitizeUserName(const string &username)
+string UserModel::sanitizeUserName(const string &username)
 {
     return strip_all_tags(username) ;
 }
 
-string User::sanitizePassword(const string &password)
+string UserModel::sanitizePassword(const string &password)
 {
     return trim_copy(password) ;
 }
 
-void User::create(const string &username, const string &password, const string &role)
+void UserModel::create(const string &username, const string &password, const string &role)
 {
     string secure_pass = encodeBase64(passwordHash(password)) ;
     ctx_.con_.execute("INSERT INTO users ( name, password ) VALUES ( ?, ? )", username, secure_pass);
     ctx_.con_.execute("INSERT INTO user_roles ( user_id, role_id ) VALUES ( (SELECT last_insert_rowid()), ? )", role) ;
 }
 
-void User::update(const string &id, const string &password, const string &role)
+void UserModel::update(const string &id, const string &password, const string &role)
 {
     string secure_pass = encodeBase64(passwordHash(password)) ;
     ctx_.con_.execute("UPDATE users SET password=? WHERE id=?", secure_pass, id) ;
@@ -298,4 +298,27 @@ Dictionary DefaultAuthorizationModel::getRoles() const {
         roles.emplace(pr.first, pr.second.name_) ;
     }
     return roles ;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
+User UserRepository::fetch(const string &username)
+{
+    QueryResult res = con_.query("SELECT u.id AS name, u.password as password, r.role_id as role FROM users AS u JOIN user_roles AS r ON r.user_id = u.id WHERE name = ? LIMIT 1;", username) ;
+
+    User u ;
+    if ( res.next() ) {
+        u.name_ = res.get<string>("name") ;
+        u.password_ = res.get<string>("password") ;
+        u.role_ = res.get<string>("role") ;
+    }
+
+    return u ;
+}
+
+void UserRepository::create() {
+    con_.execute("CREATE TABLE IF NOT EXISTS " + prefix_ + "users ( id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, password TEXT NOT NULL );") ;
+    con_.execute("CREATE TABLE IF NOT EXISTS " + prefix_ + "auth_tokens ( id INTEGER PRIMARY KEY AUTOINCREMENT, selector TEXT, token TEXT, user_id INTEGER NOT NULL, expires INTEGER, FOREIGN KEY(user_id) REFERENCES users(id) );") ;
+    con_.execute("CREATE TABLE IF NOT EXISTS " + prefix_ + "user_roles ( id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, role_id TEXT, FOREIGN KEY(user_id) REFERENCES users(id));") ;
+    con_.execute("CREATE TABLE IF NOT EXISTS " + prefix_ + "roles ( id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL );") ;
 }

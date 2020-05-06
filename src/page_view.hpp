@@ -10,12 +10,12 @@
 class PageView {
  public:
 
-    PageView(const User &user, twig::Variant menu);
+    PageView(const UserModel &user, twig::Variant menu);
 
     twig::Variant data(const std::string &page_id, const std::string &title) const;
 
     twig::Variant menu_ ;
-    const User &auth_ ;
+    const UserModel &auth_ ;
 } ;
 
 

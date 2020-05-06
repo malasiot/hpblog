@@ -10,7 +10,7 @@ using namespace twig ;
 
 class UserModifyForm: public FormHandler {
 public:
-    UserModifyForm(User &user, const string &id ) ;
+    UserModifyForm(UserModel &user, const string &id ) ;
 
     void onSuccess(const Request &request) override {
         string password = getValue("password") ;
@@ -22,13 +22,13 @@ public:
     }
 
 private:
-    User &user_ ;
+    UserModel &user_ ;
     string id_ ;
 };
 
 class UserCreateForm: public FormHandler {
 public:
-    UserCreateForm(User &user) ;
+    UserCreateForm(UserModel &user) ;
 
     void onSuccess(const Request &request) override {
         string username = getValue("username") ;
@@ -39,14 +39,14 @@ public:
     }
 
 private:
-    User &user_ ;
+    UserModel &user_ ;
 };
 
-UserCreateForm::UserCreateForm(User &auth): user_(auth) {
+UserCreateForm::UserCreateForm(UserModel &auth): user_(auth) {
 
     field("username").alias("Username")
         .setNormalizer([&] (const string &val) {
-            return User::sanitizeUserName(val) ;
+            return UserModel::sanitizeUserName(val) ;
         })
         .addValidator<NonEmptyValidator>()
         .addValidator([&] (const string &val, const FormField &f) {
@@ -58,13 +58,13 @@ UserCreateForm::UserCreateForm(User &auth): user_(auth) {
     FormField &password_field =  field("password") ;
     password_field.alias("Password")
         .setNormalizer([] (const string &val) {
-            return User::sanitizePassword(val) ;
+            return UserModel::sanitizePassword(val) ;
         })
         .addValidator<NonEmptyValidator>() ;
 
     field("cpassword")
         .setNormalizer([&] (const string &val) {
-            return User::sanitizePassword(val) ;
+            return UserModel::sanitizePassword(val) ;
         })
         .addValidator([&] (const string &val, const FormField &f)  {
             if ( password_field.valid() && password_field.getValue() != val  )
@@ -79,18 +79,18 @@ UserCreateForm::UserCreateForm(User &auth): user_(auth) {
     field("role").addValidator<SelectionValidator>(keys).alias("Role") ;
 }
 
-UserModifyForm::UserModifyForm(User &auth, const string &id): user_(auth), id_(id) {
+UserModifyForm::UserModifyForm(UserModel &auth, const string &id): user_(auth), id_(id) {
 
     FormField &password_field =  field("password") ;
     password_field.alias("New Password")
         .setNormalizer([&] (const string &val) {
-            return User::sanitizePassword(val) ;
+            return UserModel::sanitizePassword(val) ;
         })
         .addValidator<NonEmptyValidator>() ;
 
     field("cpassword").alias("Confirm Password")
         .setNormalizer([&] (const string &val) {
-            return User::sanitizePassword(val) ;
+            return UserModel::sanitizePassword(val) ;
         })
         .addValidator([&] (const string &val, const FormField &f) {
             if ( password_field.valid() && password_field.getValue() != val  )

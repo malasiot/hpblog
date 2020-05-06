@@ -9,28 +9,28 @@ using namespace ws ;
 
 class LoginForm: public FormHandler {
 public:
-    LoginForm(User &auth) ;
+    LoginForm(UserModel &auth) ;
 
     bool validate(const ws::Request &vals) override ;
 
     void onSuccess(const ws::Request &request) override;
 
 private:
-    User &auth_ ;
+    UserModel &auth_ ;
 
 };
 
-LoginForm::LoginForm(User &auth): auth_(auth) {
+LoginForm::LoginForm(UserModel &auth): auth_(auth) {
 
     field("username").alias("Username")
         .setNormalizer([&] (const string &val) {
-            return User::sanitizeUserName(val) ;
+            return UserModel::sanitizeUserName(val) ;
         })
         .addValidator<NonEmptyValidator>();
 
     field("password").alias("Password")
         .setNormalizer([&] (const string &val) {
-            return User::sanitizePassword(val) ;
+            return UserModel::sanitizePassword(val) ;
         })
         .addValidator<NonEmptyValidator>() ;
 

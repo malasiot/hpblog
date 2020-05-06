@@ -13,9 +13,40 @@
 
 class AuthorizationModel ;
 
-class User {
+struct User {
+    std::string name_, password_ ;
+    std::string role_ ;
+};
+
+class UserRepository {
 public:
-    User(AppContext &ctx, AuthorizationModel &auth):
+    UserRepository(xdb::Connection &con, const std::string &table_prefix = std::string()): con_(con), prefix_(table_prefix) {
+        create() ;
+    } ;
+
+    void createUser(const std::string &username, const std::string &password, const std::string &role_str) ;
+
+    // check database for username
+    bool userNameExists(const std::string &username) ;
+
+    User fetch(const std::string &name) ;
+
+    void updatePassword(const std::string &username, const std::string &password) ;
+    void updateRole(const std::string &username, const std::string &role) ;
+
+private:
+
+    void create() ;
+
+private:
+
+    xdb::Connection &con_ ;
+    std::string prefix_ ;
+};
+
+class UserModel {
+public:
+    UserModel(AppContext &ctx, AuthorizationModel &auth):
         ctx_(ctx), auth_(auth) {
     }
 

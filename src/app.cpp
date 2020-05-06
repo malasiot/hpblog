@@ -78,10 +78,12 @@ public:
 
             Connection con("sqlite:db=" + root_ + "/blog.sqlite") ; // establish connection with database
 
+            UserRepository users(con) ;
+
             AppContext ctx(con, session, req, resp, engine_) ;
 
             DefaultAuthorizationModel auth(Variant::fromJSONFile(root_ + "templates/acm.json")) ;
-            User user(ctx, auth) ; // setup authentication
+            UserModel user(ctx, auth) ; // setup authentication
 
             PageView page(user, Variant::fromJSONFile(root_ + "templates/menu.json")) ; // global page data
 

@@ -5,7 +5,7 @@
 #include <ws/session.hpp>
 #include <twig/renderer.hpp>
 
-class User ;
+class UserModel ;
 class PageView ;
 
 using Dictionary = std::map<std::string, std::string>;
@@ -24,10 +24,10 @@ struct AppContext {
 };
 
 struct PageContext: public AppContext {
-    PageContext(AppContext &actx, User &user, PageView &page): AppContext(actx),
+    PageContext(AppContext &actx, UserModel &user, PageView &page): AppContext(actx),
         user_(user), page_(page) {}
 
-    User &user_ ;
+    UserModel &user_ ;
     PageView &page_ ;
 };
 
