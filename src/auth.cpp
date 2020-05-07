@@ -302,23 +302,28 @@ Dictionary DefaultAuthorizationModel::getRoles() const {
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-User UserRepository::fetch(const string &username)
+void UserRepository::createUser(const string &email, const string &username, const string &password, const std::vector<string> &roles)
 {
-    QueryResult res = con_.query("SELECT u.id AS name, u.password as password, r.role_id as role FROM users AS u JOIN user_roles AS r ON r.user_id = u.id WHERE name = ? LIMIT 1;", username) ;
+
+}
+
+User UserRepository::fetchUser(int64_t id)
+{
+    QueryResult res = con_.query("SELECT id, name, email, password, role FROM users WHERE id = ?;", id) ;
 
     User u ;
     if ( res.next() ) {
+        u.id_ = res.get<int64_t>("id") ;
         u.name_ = res.get<string>("name") ;
         u.password_ = res.get<string>("password") ;
-        u.role_ = res.get<string>("role") ;
+        u.email_ = res.get<string>("email") ;
+        split(u.roles_, res.get<string>("roles"), '|');
     }
 
     return u ;
 }
 
 void UserRepository::create() {
-    con_.execute("CREATE TABLE IF NOT EXISTS " + prefix_ + "users ( id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, password TEXT NOT NULL );") ;
+    con_.execute("CREATE TABLE IF NOT EXISTS " + prefix_ + "users ( id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, enabled INTEGER DEFAULT 0, created INTEGER NOT NULL, roles TEXT NOT NULL );") ;
     con_.execute("CREATE TABLE IF NOT EXISTS " + prefix_ + "auth_tokens ( id INTEGER PRIMARY KEY AUTOINCREMENT, selector TEXT, token TEXT, user_id INTEGER NOT NULL, expires INTEGER, FOREIGN KEY(user_id) REFERENCES users(id) );") ;
-    con_.execute("CREATE TABLE IF NOT EXISTS " + prefix_ + "user_roles ( id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, role_id TEXT, FOREIGN KEY(user_id) REFERENCES users(id));") ;
-    con_.execute("CREATE TABLE IF NOT EXISTS " + prefix_ + "roles ( id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL );") ;
 }

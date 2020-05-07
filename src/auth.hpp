@@ -14,25 +14,37 @@
 class AuthorizationModel ;
 
 struct User {
-    std::string name_, password_ ;
-    std::string role_ ;
+    int64_t id_ ;
+    std::string email_, name_, password_ ;
+    std::vector<std::string> roles_ ;
 };
 
-class UserRepository {
+class UserProvider {
+public:
+    UserProvider() = default ;
+
+    virtual User fetchUser(int64_t id) = 0 ;
+} ;
+
+class UserRepository: public UserProvider {
 public:
     UserRepository(xdb::Connection &con, const std::string &table_prefix = std::string()): con_(con), prefix_(table_prefix) {
         create() ;
-    } ;
+    }
 
-    void createUser(const std::string &username, const std::string &password, const std::string &role_str) ;
+    void createUser(const std::string &email, const std::string &username, const std::string &password, const std::vector<std::string> &roles) ;
 
     // check database for username
     bool userNameExists(const std::string &username) ;
 
+    bool userEmailExists(const std::string &email) ;
+
     User fetch(const std::string &name) ;
 
-    void updatePassword(const std::string &username, const std::string &password) ;
-    void updateRole(const std::string &username, const std::string &role) ;
+    User fetchUser(int64_t id) override ;
+
+    void updatePassword(const std::string &email, const std::string &password) ;
+    void updateRole(const std::string &email, const std::string &role) ;
 
 private:
 
