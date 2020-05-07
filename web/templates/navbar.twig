@@ -47,6 +47,7 @@
 {% block body %}
 {% import 'bs3-forms' as forms %}
 {{ forms.start() }}
+{{ forms.input('email', type='text', label='E-mail', required = true) }}
 {{ forms.input('username', type='text', label='Username', required = true) }}
 {{ forms.input('password', type='password', label='Password', required = true) }}
 {{ forms.button('Submit') }}

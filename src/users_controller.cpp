@@ -10,47 +10,48 @@ using namespace twig ;
 
 class UserModifyForm: public FormHandler {
 public:
-    UserModifyForm(UserModel &user, const string &id ) ;
+    UserModifyForm(Authenticator &user, const string &id ) ;
 
     void onSuccess(const Request &request) override {
         string password = getValue("password") ;
         string role = getValue("role") ;
 
-        user_.update(id_, password, role) ;
+        user_.updatePassword(id_, password) ;
     }
     void onGet(const Request &request) override {
     }
 
 private:
-    UserModel &user_ ;
+    Authenticator &user_ ;
     string id_ ;
 };
 
 class UserCreateForm: public FormHandler {
 public:
-    UserCreateForm(UserModel &user) ;
+    UserCreateForm(Authenticator &user) ;
 
     void onSuccess(const Request &request) override {
+        string email = getValue("email") ;
         string username = getValue("username") ;
         string password = getValue("password") ;
         string role = getValue("role") ;
 
-        user_.create(username, password, role) ;
+        user_.create(email, username, password, role) ;
     }
 
 private:
-    UserModel &user_ ;
+    Authenticator &user_ ;
 };
 
-UserCreateForm::UserCreateForm(UserModel &auth): user_(auth) {
+UserCreateForm::UserCreateForm(Authenticator &auth): user_(auth) {
 
     field("username").alias("Username")
         .setNormalizer([&] (const string &val) {
-            return UserModel::sanitizeUserName(val) ;
+            return Authenticator::sanitizeUserName(val) ;
         })
         .addValidator<NonEmptyValidator>()
         .addValidator([&] (const string &val, const FormField &f) {
-            if ( user_.userNameExists(val) )
+            if ( user_.userEmailExists(val) )
                 throw FormFieldValidationError("username already exists") ;
 
         }) ;
@@ -58,52 +59,53 @@ UserCreateForm::UserCreateForm(UserModel &auth): user_(auth) {
     FormField &password_field =  field("password") ;
     password_field.alias("Password")
         .setNormalizer([] (const string &val) {
-            return UserModel::sanitizePassword(val) ;
+            return Authenticator::sanitizePassword(val) ;
         })
         .addValidator<NonEmptyValidator>() ;
 
     field("cpassword")
         .setNormalizer([&] (const string &val) {
-            return UserModel::sanitizePassword(val) ;
+            return Authenticator::sanitizePassword(val) ;
         })
         .addValidator([&] (const string &val, const FormField &f)  {
             if ( password_field.valid() && password_field.getValue() != val  )
                 throw FormFieldValidationError("Passwords don't match") ;
         });
-
+/*
     vector<string> keys ;
     for( auto &&p: user_.auth().getRoles() ) {
         keys.emplace_back(p.first) ;
     }
 
     field("role").addValidator<SelectionValidator>(keys).alias("Role") ;
+    */
 }
 
-UserModifyForm::UserModifyForm(UserModel &auth, const string &id): user_(auth), id_(id) {
+UserModifyForm::UserModifyForm(Authenticator &auth, const string &id): user_(auth), id_(id) {
 
     FormField &password_field =  field("password") ;
     password_field.alias("New Password")
         .setNormalizer([&] (const string &val) {
-            return UserModel::sanitizePassword(val) ;
+            return Authenticator::sanitizePassword(val) ;
         })
         .addValidator<NonEmptyValidator>() ;
 
     field("cpassword").alias("Confirm Password")
         .setNormalizer([&] (const string &val) {
-            return UserModel::sanitizePassword(val) ;
+            return Authenticator::sanitizePassword(val) ;
         })
         .addValidator([&] (const string &val, const FormField &f) {
             if ( password_field.valid() && password_field.getValue() != val  )
                 throw FormFieldValidationError("Passwords don't match") ;
         }) ;
-
+/*
     vector<string> keys ;
     for( auto &&p: user_.auth().getRoles() ) {
         keys.emplace_back(p.first) ;
     }
 
     field("role").addValidator<SelectionValidator>(keys).alias("Role") ;
-
+*/
 }
 /*
 
@@ -141,8 +143,8 @@ void UsersController::fetch()
 void UsersController::edit()
 {
     Variant::Object ctx{
-        { "page", page_.data("edit_users", "Edit Users") },
-        { "roles", Variant::fromDictionary(user_.auth().getRoles()) }
+        { "page", page_.data("edit_users", "Edit Users") } /*
+        { "roles", Variant::fromDictionary(user_.auth().getRoles()) } */
     };
 
     response_.write(engine_.render("users-edit", ctx)) ;
@@ -186,27 +188,27 @@ bool UsersController::dispatch()
     bool logged_in = user_.check() ;
 
     if ( request_.matches("GET", "/users/edit/") ) { // load users list editor
-        if ( logged_in && user_.can("users.edit")) edit() ;
+        if ( logged_in && auth_->can(user_.userRole(), "users.edit")) edit() ;
         else throw HttpResponseException(Response::unauthorized) ;
         return true ;
     }
     if ( request_.matches("GET", "/users/list/") ) { // fetch table data
-        if ( logged_in && user_.can("users.list")) fetch() ;
+        if ( logged_in && auth_->can(user_.userRole(), "users.list")) fetch() ;
         else throw HttpResponseException(Response::unauthorized) ;
         return true ;
     }
     if ( request_.matches("GET|POST", "/users/add/") ) {
-        if ( logged_in && user_.can("users.add")) create() ;
+        if ( logged_in && auth_->can(user_.userRole(), "users.add")) create() ;
         else throw HttpResponseException(Response::unauthorized) ;
         return true ;
     }
     if ( request_.matches("GET|POST", "/users/update/") ) {
-        if ( logged_in && user_.can("users.modify")) update() ;
+        if ( logged_in && auth_->can(user_.userRole(), "users.modify")) update() ;
         else throw HttpResponseException(Response::unauthorized) ;
         return true ;
     }
     else if ( request_.matches("POST", "/users/delete/") ) {
-        if ( logged_in && user_.can("users.delete") ) remove() ;
+        if ( logged_in && auth_->can(user_.userRole(), "users.delete") ) remove() ;
         else throw HttpResponseException(Response::unauthorized) ;
         return true ;
     }

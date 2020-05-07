@@ -9,28 +9,34 @@ using namespace ws ;
 
 class LoginForm: public FormHandler {
 public:
-    LoginForm(UserModel &auth) ;
+    LoginForm(Authenticator &auth) ;
 
     bool validate(const ws::Request &vals) override ;
 
     void onSuccess(const ws::Request &request) override;
 
 private:
-    UserModel &auth_ ;
+    Authenticator &auth_ ;
 
 };
 
-LoginForm::LoginForm(UserModel &auth): auth_(auth) {
+LoginForm::LoginForm(Authenticator &auth): auth_(auth) {
+
+    field("email").alias("E-mail")
+        .setNormalizer([&] (const string &val) {
+            return Authenticator::sanitizeUserName(val) ;
+        })
+        .addValidator<NonEmptyValidator>();
 
     field("username").alias("Username")
         .setNormalizer([&] (const string &val) {
-            return UserModel::sanitizeUserName(val) ;
+            return Authenticator::sanitizeUserName(val) ;
         })
         .addValidator<NonEmptyValidator>();
 
     field("password").alias("Password")
         .setNormalizer([&] (const string &val) {
-            return UserModel::sanitizePassword(val) ;
+            return Authenticator::sanitizePassword(val) ;
         })
         .addValidator<NonEmptyValidator>() ;
 
@@ -42,19 +48,21 @@ LoginForm::LoginForm(UserModel &auth): auth_(auth) {
 bool LoginForm::validate(const ws::Request &vals) {
     if ( !FormHandler::validate(vals) ) return false ;
 
+  //  string pass = encodeBase64(passwordHash("xx") ;
+
     if ( !hashCompare(getValue("csrf_token"), auth_.token()) )
         throw std::runtime_error("Security exception" ) ;
 
-    string username = getValue("username") ;
+    string email = getValue("email") ;
     string password = getValue("password") ;
 
-    if ( !auth_.userNameExists(username) ) {
+    if ( !auth_.userEmailExists(email) ) {
         errors_.push_back("Username does not exist") ;
         return false ;
     }
 
-    string stored_password, user_id, role ;
-    auth_.load(username, user_id, stored_password, role) ;
+    string stored_password, user_id, role, user_name ;
+    auth_.load(email, user_id, user_name, stored_password, role) ;
 
     if ( !auth_.verifyPassword(password, stored_password) ) {
         errors_.push_back("Password mismatch") ;
@@ -68,8 +76,8 @@ void LoginForm::onSuccess(const ws::Request &request) {
     string username = getValue("username") ;
     bool remember_me = getValue("remember-me") == "on" ;
 
-    string stored_password, user_id, role ;
-    auth_.load(username, user_id, stored_password, role) ;
+    string stored_password, user_id, role, user_name ;
+    auth_.load(username, user_id, user_name, stored_password, role) ;
     auth_.persist(username, user_id, role, remember_me) ;
 }
 

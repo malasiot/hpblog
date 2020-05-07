@@ -83,11 +83,13 @@ public:
             AppContext ctx(con, session, req, resp, engine_) ;
 
             DefaultAuthorizationModel auth(Variant::fromJSONFile(root_ + "templates/acm.json")) ;
-            UserModel user(ctx, auth) ; // setup authentication
+
+            UserRepository repo(con) ;
+            Authenticator user(&repo, session, req, resp) ; // setup authentication
 
             PageView page(user, Variant::fromJSONFile(root_ + "templates/menu.json")) ; // global page data
 
-            PageContext page_ctx(ctx, user, page) ;
+            PageContext page_ctx(ctx, user, &auth, page) ;
 
             Dictionary attrs ;
 

@@ -160,7 +160,7 @@ bool PageController::dispatch()
     bool logged_in = user_.check() ;
 
     if ( request_.matches("GET", "/pages/edit/") ) { // load page list editor
-        if ( logged_in && user_.can("pages.edit")) edit() ;
+        if ( logged_in && auth_->can(user_.userRole(), "pages.edit")) edit() ;
         else throw HttpResponseException(Response::unauthorized) ;
         return true ;
     }

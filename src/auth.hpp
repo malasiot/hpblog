@@ -23,7 +23,6 @@ class UserProvider {
 public:
     UserProvider() = default ;
 
-    virtual User fetchUser(int64_t id) = 0 ;
 } ;
 
 class UserRepository: public UserProvider {
@@ -32,20 +31,26 @@ public:
         create() ;
     }
 
-    void createUser(const std::string &email, const std::string &username, const std::string &password, const std::vector<std::string> &roles) ;
+    void createUser(const std::string &email, const std::string &username, const std::string &password, const std::string &role) ;
 
     // check database for username
     bool userNameExists(const std::string &username) ;
 
     bool userEmailExists(const std::string &email) ;
 
-    User fetch(const std::string &name) ;
-
-    User fetchUser(int64_t id) override ;
-
     void updatePassword(const std::string &email, const std::string &password) ;
     void updateRole(const std::string &email, const std::string &role) ;
 
+    void removeExpiredTokens() ;
+    void addAuthToken(const std::string &id, const std::string &selector, const std::string &token, time_t expires) ;
+    void updateLastSignIn(const std::string &id, time_t t) ;
+    void removeAuthToken(const std::string &user_id) ;
+    bool rememberUser(const std::string &selector, const std::string &token,
+                      std::string &user_id, std::string &user_name, std::string &user_role) ;
+
+    void fetchUserByEmail(const std::string &email,
+                          std::string &id, std::string &name,
+                          std::string &password, std::string &role);
 private:
 
     void create() ;
@@ -56,10 +61,10 @@ private:
     std::string prefix_ ;
 };
 
-class UserModel {
+class Authenticator {
 public:
-    UserModel(AppContext &ctx, AuthorizationModel &auth):
-        ctx_(ctx), auth_(auth) {
+    Authenticator(UserRepository *repo, ws::Session &session, const ws::Request &req, ws::Response &res):
+        repo_(repo), session_(session), request_(req), response_(res) {
     }
 
     void persist(const std::string &username, const std::string &id, const std::string &role, bool remember_me = false) ;
@@ -73,29 +78,29 @@ public:
     std::string token() const ;
 
     // check database for username
-    bool userNameExists(const std::string &username) ;
+    bool userEmailExists(const std::string &email) ;
 
     // verify query password against the one stored in database
     bool verifyPassword(const std::string &query, const std::string &stored) ;
 
     // fetch user from database
-    void load(const std::string &username, std::string &id, std::string &password, std::string &role) ;
+    void load(const std::string &email, std::string &id, std::string &name, std::string &password, std::string &role) ;
 
     // test if the user has permission to perform the action
     bool can(const std::string &action) const ;
 
-    AuthorizationModel &auth() const { return auth_ ; }
-
     static std::string sanitizeUserName(const std::string &username);
     static std::string sanitizePassword(const std::string &password);
 
-    void create(const std::string &username, const std::string &password, const std::string &role) ;
-    void update(const std::string &id, const std::string &password, const std::string &role) ;
+    void create(const std::string &email, const std::string &username, const std::string &password, const std::string &role) ;
+    void updatePassword(const std::string &id, const std::string &password) ;
 
 protected:
 
-    AppContext &ctx_ ;
-    AuthorizationModel &auth_ ;
+    UserRepository *repo_ ;
+    ws::Session &session_ ;
+    ws::Response &response_ ;
+    const ws::Request &request_ ;
 } ;
 
 class AuthorizationModel {
@@ -104,6 +109,7 @@ public:
 
     virtual Dictionary getRoles() const = 0 ;
     virtual std::vector<std::string> getPermissions(const std::string &role) const = 0 ;
+    virtual bool can(const std::string &role, const std::string &action) const = 0;
 };
 
 class DefaultAuthorizationModel: public AuthorizationModel {
@@ -113,9 +119,10 @@ public:
 
     DefaultAuthorizationModel(twig::Variant role_map) ;
 
-    virtual Dictionary getRoles() const ;
+    virtual Dictionary getRoles() const override;
     std::vector<std::string> getPermissions(const std::string &role) const override ;
 
+    bool can(const std::string &role, const std::string &action) const override;
 private:
     struct Role {
         Role(const std::string name, const std::vector<std::string> &permissions):

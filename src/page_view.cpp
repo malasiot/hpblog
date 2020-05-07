@@ -3,7 +3,7 @@
 using namespace std ;
 using namespace twig ;
 
-PageView::PageView(const UserModel &user, Variant menu): auth_(user), menu_(menu) {
+PageView::PageView(const Authenticator &user, Variant menu): auth_(user), menu_(menu) {
 }
 
 Variant PageView::data(const std::string &page_id, const std::string &title) const {
