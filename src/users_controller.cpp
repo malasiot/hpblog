@@ -36,7 +36,8 @@ public:
         string password = getValue("password") ;
         string role = getValue("role") ;
 
-        user_.create(email, username, password, role) ;
+        string url ;
+        user_.create(email, username, password, role, url) ;
     }
 
 private:
@@ -51,7 +52,7 @@ UserCreateForm::UserCreateForm(Authenticator &auth): user_(auth) {
         })
         .addValidator<NonEmptyValidator>()
         .addValidator([&] (const string &val, const FormField &f) {
-            if ( user_.userEmailExists(val) )
+            if ( user_.userNameExists(val) )
                 throw FormFieldValidationError("username already exists") ;
 
         }) ;

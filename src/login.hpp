@@ -11,7 +11,8 @@ public:
     bool dispatch() ;
     void login() ;
     void logout() ;
-
+    void reg();
+    void activate();
 private:
     PageContext &ctx_ ;
 };

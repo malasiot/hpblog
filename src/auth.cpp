@@ -10,7 +10,26 @@ using namespace xdb ;
 using namespace ws ;
 using namespace twig ;
 
-void Authenticator::persist(const std::string &user_name, const std::string &user_id, const std::string &user_role, bool remember_me)
+Authenticator::AuthResult Authenticator::login(const string &username, const string &password) {
+    if ( !userNameExists(username) )
+        return USER_NAME_NOT_FOUND ;
+
+    string stored_password, user_id, role, user_name ;
+    load(username, user_id, stored_password, role) ;
+
+    if ( !verifyPassword(password, stored_password) )
+        return PASSWORD_MISMATCH ;
+
+    return OK ;
+}
+
+void Authenticator::persist(const string &username, bool remember_me) {
+    string stored_password, user_id, role, user_name ;
+    load(username, user_id, stored_password, role) ;
+    persistUser(username, user_id, role, remember_me) ;
+}
+
+void Authenticator::persistUser(const std::string &user_name, const std::string &user_id, const std::string &user_role, bool remember_me)
 {
     // fill in session cache with user information
 
@@ -53,9 +72,9 @@ void Authenticator::forget()
         string cookie = request_.getCookie("auth_token") ;
 
         if ( !cookie.empty() ) {
-           response_.setCookie("auth_token", string(), 0, "/") ;
+            response_.setCookie("auth_token", string(), 0, "/") ;
 
-           repo_->removeAuthToken(user_id) ;
+            repo_->removeAuthToken(user_id) ;
         }
     }
 }
@@ -94,6 +113,17 @@ string Authenticator::token() const
     else return session_token ;
 }
 
+bool Authenticator::userNameExists(const string &name) {
+    return repo_->userNameExists(name) ;
+}
+
+bool Authenticator::activate(const string &id, const string &selector, const string &token)
+{
+    return repo_->activate(id, selector, token) ;
+
+
+
+}
 
 
 bool Authenticator::check() const
@@ -114,11 +144,11 @@ bool Authenticator::check() const
 
             string user_id, user_name, user_role ;
             if ( repo_->rememberUser(tokens[0], tokens[1], user_id, user_name, user_role)) {
-               session_.add("user_name", user_name) ;
-               session_.add("user_id", user_id) ;
-               session_.add("user_role", user_role) ;
+                session_.add("user_name", user_name) ;
+                session_.add("user_id", user_id) ;
+                session_.add("user_role", user_role) ;
 
-               return true ;
+                return true ;
             }
         }
 
@@ -128,28 +158,15 @@ bool Authenticator::check() const
     return false ;
 }
 
-bool Authenticator::userEmailExists(const string &username)
-{
-    return repo_->userEmailExists(username) ;
-
-}
 
 bool Authenticator::verifyPassword(const string &query, const string &stored) {
     return passwordVerify(query, decodeBase64(stored)) ;
 }
 
-void Authenticator::load(const string &email, string &id, string &name, string &password, string &role)
+void Authenticator::load(const string &name, string &id, string &password, string &role)
 {
-    repo_->fetchUserByEmail(email, id, name, password, role) ;
-    /*
-    QueryResult res = ctx_.con_.query("SELECT u.id AS id, u.password as password, r.role_id as role FROM users AS u JOIN user_roles AS r ON r.user_id = u.id WHERE name = ? LIMIT 1;", username) ;
+    repo_->fetchUserByName(name, id,  password, role) ;
 
-    if ( res.next() ) {
-        id = res.get<string>("id") ;
-        password = res.get<string>("password") ;
-        role = res.get<string>("role") ;
-    }
-    */
 }
 
 static string glob_to_regex(const string &pat)
@@ -166,25 +183,25 @@ static string glob_to_regex(const string &pat)
 
         switch (c)
         {
-            case '*':
-                rx += ".*?" ;
-                break;
-            case '$':  //Regex special characters
-            case '(':
-            case ')':
-            case '+':
-            case '.':
-            case '|':
-                rx += '\\';
-                rx += c;
-                break;
-            case '\\':
-                if ( *cursor == '*' ) rx += "\\*" ;
-                else if ( *cursor == '?' )  rx += "\\?" ;
-                cursor ++ ;
+        case '*':
+            rx += ".*?" ;
+            break;
+        case '$':  //Regex special characters
+        case '(':
+        case ')':
+        case '+':
+        case '.':
+        case '|':
+            rx += '\\';
+            rx += c;
+            break;
+        case '\\':
+            if ( *cursor == '*' ) rx += "\\*" ;
+            else if ( *cursor == '?' )  rx += "\\?" ;
+            cursor ++ ;
             break ;
-            default:
-                rx += c;
+        default:
+            rx += c;
         }
     }
 
@@ -236,11 +253,10 @@ string Authenticator::sanitizePassword(const string &password)
     return trim_copy(password) ;
 }
 
-void Authenticator::create(const string &email, const string &username, const string &password, const string &role)
+void Authenticator::create(const string &username, const string &email, const string &password, const string &role, string &url)
 {
     string secure_pass = encodeBase64(passwordHash(password)) ;
-    repo_->createUser(email, username, password, role) ;
-
+    repo_->createUser(email, username, secure_pass, role, url) ;
 }
 
 void Authenticator::updatePassword(const string &id, const string &password)
@@ -291,10 +307,21 @@ Dictionary DefaultAuthorizationModel::getRoles() const {
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-void UserRepository::createUser(const string &email, const string &username, const string &password, const string &role)
+void UserRepository::createUser(const string &email, const string &username, const string &password, const string &role, string &url)
 {
-     con_.execute("INSERT INTO users ( email, name, password, role ) VALUES ( ?, ?, ?, ? )", email, username, password, role);
+    con_.execute("INSERT INTO users ( name, password, role ) VALUES ( ?, ?, ? )",  username, password, role);
 
+    int64_t id = con_.last_insert_rowid() ;
+    con_.execute("INSERT INTO user_info (user_id, email, last_sign_in) VALUES ( ?, ?, ? )", id, email, time(nullptr) ) ;
+
+    string selector = encodeBase64(randomBytes(12)) ;
+    string token = randomBytes(24) ;
+    time_t expires 	= std::time(nullptr) + 3600*24*10; // Expire in 10 days
+
+    string htoken = binToHex(hashSHA256(token)) ;
+    addAuthToken(to_string(id), selector, htoken, expires) ;
+
+    url = "login/activate?id=" + to_string(id) + "&s=" + selector + "&t=" + encodeBase64(token) ;
 }
 
 
@@ -308,7 +335,7 @@ void UserRepository::removeExpiredTokens() {
 
 void UserRepository::addAuthToken(const string &user_id, const string &selector, const string &token, time_t expires)
 {
-    con_.execute("INSERT INTO auth_tokens ( user_id, selector, token, expires ) VALUES ( ?, ?, ?, ? );", user_id, selector, binToHex(hashSHA256(token)), expires) ;
+    con_.execute("INSERT INTO auth_tokens ( user_id, selector, token, expires ) VALUES ( ?, ?, ?, ? );", user_id, selector, token, expires) ;
 
 }
 
@@ -325,8 +352,8 @@ bool UserRepository::rememberUser(const string &selector, const std::string &tok
 {
 
     QueryResult res = con_.query(
-        "SELECT a.user_id as user_id, a.token as token, u.name as username, r.role_id as role FROM auth_tokens AS a JOIN users AS u ON a.user_id = u.id JOIN user_roles AS r ON r.user_id = u.id WHERE a.selector = ? AND a.expires > ? LIMIT 1",
-                       selector, std::time(nullptr)) ;
+                "SELECT a.user_id as user_id, a.token as token, u.name as username, r.role_id as role FROM auth_tokens AS a JOIN users AS u ON a.user_id = u.id JOIN user_roles AS r ON r.user_id = u.id WHERE a.selector = ? AND a.expires > ? LIMIT 1",
+                selector, std::time(nullptr)) ;
 
     if ( res.next() ) {
 
@@ -334,36 +361,63 @@ bool UserRepository::rememberUser(const string &selector, const std::string &tok
         string stored_token = res.get<string>("token") ;
 
         if ( hash_equals(stored_token, cookie_token) ) {
-           user_name = res.get<string>("username") ;
-           user_id = res.get<string>("user_id") ;
-           user_role = res.get<string>("user_role") ;
+            user_name = res.get<string>("username") ;
+            user_id = res.get<string>("user_id") ;
+            user_role = res.get<string>("user_role") ;
 
-           return true ;
+            return true ;
         }
     }
     return false ;
 }
 
-void UserRepository::fetchUserByEmail(const string &email,
-                                      string &id, string &name, string &password, string &role) {
-
-    QueryResult res = con_.query("SELECT id, password, name, role FROM users WHERE email = ? LIMIT 1;", email) ;
+void UserRepository::fetchUserByName(const string &name, string &id, string &password, string &role)
+{
+    QueryResult res = con_.query("SELECT id, password, role FROM users WHERE name = ? LIMIT 1;", name) ;
 
     if ( res.next() ) {
         id = res.get<string>("id") ;
         password = res.get<string>("password") ;
-        name = res.get<string>("name") ;
         role = res.get<string>("role") ;
     }
 
 }
+
 
 bool UserRepository::userEmailExists(const string &email) {
     QueryResult res = con_.query("SELECT id FROM 'users' WHERE email = ? LIMIT 1;", email) ;
     return res.next() ;
 }
 
+bool UserRepository::userNameExists(const string &name) {
+    QueryResult res = con_.query("SELECT id FROM 'users' WHERE name = ? LIMIT 1;", name) ;
+    return res.next() ;
+}
+
 void UserRepository::create() {
-    con_.execute("CREATE TABLE IF NOT EXISTS " + prefix_ + "users ( id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, enabled INTEGER DEFAULT 0, created INTEGER NOT NULL, role TEXT NOT NULL );") ;
-    con_.execute("CREATE TABLE IF NOT EXISTS " + prefix_ + "auth_tokens ( id INTEGER PRIMARY KEY AUTOINCREMENT, selector TEXT, token TEXT, user_id INTEGER NOT NULL, expires INTEGER, FOREIGN KEY(user_id) REFERENCES users(id) );") ;
+    con_.execute("CREATE TABLE IF NOT EXISTS " + prefix_ + "users ( id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, password TEXT NOT NULL, enabled INTEGER DEFAULT 0, role TEXT NOT NULL );") ;
+    con_.execute("CREATE TABLE IF NOT EXISTS " + prefix_ + "user_info ( user_id INTEGER PRIMARY KEY, email TEXT NOT NULL, last_sign_in INTEGER NOT NULL, FOREIGN KEY(user_id) REFERENCES users(id) );") ;
+    con_.execute("CREATE TABLE IF NOT EXISTS " + prefix_ + "auth_tokens ( id INTEGER PRIMARY KEY AUTOINCREMENT, token TEXT, user_id INTEGER NOT NULL, expires INTEGER, FOREIGN KEY(user_id) REFERENCES users(id) );") ;
+}
+
+bool UserRepository::activate(const string &id, const string &selector, const string &token) {
+    QueryResult res = con_.query(
+                "SELECT token FROM auth_tokens WHERE selector = ? AND user_id = ? AND expires > ? LIMIT 1",
+                selector, id, std::time(nullptr)) ;
+
+    if ( res.next() ) {
+
+        string btoken = decodeBase64(token) ;
+        string cookie_token = binToHex(hashSHA256(btoken)) ;
+        string stored_token = res.get<string>("token") ;
+
+        if ( hash_equals(stored_token, cookie_token) ) {
+            con_.execute("DELETE FROM auth_tokens WHERE user_id=? AND selector = ?", id, selector) ;
+            con_.execute("UPDATE users SET enabled = 1 WHERE id=?", id) ;
+            return true ;
+        }
+    }
+
+
+    return false ;
 }

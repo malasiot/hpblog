@@ -37,7 +37,7 @@
                         </li>
 		{% else %}
 				
-                    <li><a href="#" id="login">Login</a></li>
+                    <li><a href="#" id="login">Login</a>|<a href="#" id="register">Register</a></li>
 		{% endif %}
                   </ul>
         </div>
@@ -47,9 +47,21 @@
 {% block body %}
 {% import 'bs3-forms' as forms %}
 {{ forms.start() }}
-{{ forms.input('email', type='text', label='E-mail', required = true) }}
 {{ forms.input('username', type='text', label='Username', required = true) }}
 {{ forms.input('password', type='password', label='Password', required = true) }}
+{{ forms.button('Submit') }}
+{{ forms.end() }}
+{% endblock %}
+{% endembed %}
+
+{% embed 'modal' with { id: "register-modal", title: "Register" } only %}
+{% block body %}
+{% import 'bs3-forms' as forms %}
+{{ forms.start() }}
+{{ forms.input('username', type='text', label='Username', required = true) }}
+{{ forms.input('email', type='text', label='E-mail', required = true) }}
+{{ forms.input('password', type='password', label='Password', required = true) }}
+{{ forms.input('password_ver', type='password', label='Verify Password', required = true) }}
 {{ forms.button('Submit') }}
 {{ forms.end() }}
 {% endblock %}
