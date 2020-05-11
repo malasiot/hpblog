@@ -1,0 +1,26 @@
+{% extends 'headless-layout' %}
+
+{% block contents %}
+	
+    <div class="row">
+        <div class="col-md-6">
+		<div id="password-change-form">
+		{% import 'bs3-forms' as forms %}
+		{{ forms.start() }}
+		{{ forms.input('password', type='password', label='Password', required = true) }}
+		{{ forms.input('password_ver', type='password', label='Repeat Password', required = true) }}
+		{{ forms.button('Submit') }}
+		{{ forms.end() }}
+		</div>
+	</div>
+    </div>
+   
+{% endblock %}
+
+{% block extra_footers %}
+<script>
+$("#password-change-form").form({ onSuccess: function() { 
+	
+}}) ;
+</script>
+{% endblock %}

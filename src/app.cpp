@@ -61,11 +61,12 @@ class App: public RequestHandler {
     using Dictionary = map<string, string>;
 public:
 
-    App(const std::string &root_dir):
-        root_(root_dir),
+    App(const std::string &root_dir, SMTPMailer &mailer):
+        root_(root_dir), mailer_(mailer),
         engine_(std::shared_ptr<TemplateLoader>(new FileSystemTemplateLoader({{root_ + "/templates/"}, {root_ + "/templates/bootstrap-partials/"}})))
     {
         engine_.setCaching(false) ;
+
     }
 
     void handle(const Request &req, Response &resp) override {
@@ -95,7 +96,7 @@ public:
 
             if ( PageController(page_ctx).dispatch() ) return ;
             if ( UsersController(page_ctx).dispatch() ) return ;
-            if ( LoginController(page_ctx).dispatch() ) return ;
+            if ( LoginController(page_ctx, mailer_).dispatch() ) return ;
 
             if ( resp.serveStaticFile(root_, req.getPath()) ) {
                 return ;
@@ -122,6 +123,7 @@ private:
     string root_ ;
     TemplateRenderer engine_ ;
     std::unique_ptr<SessionManager> session_manager_ ;
+    SMTPMailer &mailer_ ;
 };
 
 
@@ -131,7 +133,10 @@ int main(int argc, char *argv[]) {
 
     const string root = "/home/malasiot/source/hpblog/web/" ;
 
-    App *app = new App(root) ;
+    SMTPMailer c("smtp.gmail.com", 587) ;
+    c.authenticate(argv[1], argv[2], ws::SMTPMailer::auth_method_t::START_TLS) ;
+
+    App *app = new App(root, c) ;
 
     app->setSessionManager(new SQLite3SessionManager("/tmp/session.sqlite")) ;
 

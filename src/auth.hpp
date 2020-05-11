@@ -52,9 +52,16 @@ public:
                           std::string &id,
                          std::string &password, std::string &role);
     bool activate(const std::string &id, const std::string &selector, const std::string &token);
+
+    std::string makePasswordResetUrl(const std::string &email) ;
+    bool resetPassword(const std::string &id, const std::string &selector, const std::string &token, const std::string &password);
+
 private:
 
     void create() ;
+
+    std::string fetchUserByEmail(const std::string &email);
+
 
 private:
 
@@ -98,7 +105,14 @@ public:
     // check database for username
     bool userNameExists(const std::string &name) ;
 
+    bool emailExists(const std::string &email) ;
+
     bool activate(const std::string &id, const std::string &selector, const std::string &token) ;
+
+    std::string makePasswordResetUrl(const std::string &email) ;
+
+    bool resetPassword(const std::string &id, const std::string &selector, const std::string &token,
+                       const std::string &password) ;
 
 protected:
 

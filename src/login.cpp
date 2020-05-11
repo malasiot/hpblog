@@ -1,6 +1,7 @@
 #include "login.hpp"
 
 #include <ws/crypto.hpp>
+#include <ws/mailer.hpp>
 
 #include "forms.hpp"
 
@@ -154,15 +155,144 @@ void RegisterForm::onSuccess(const ws::Request &request) {
     auth_.create(username, email, password, "user", url) ;
 }
 
+class PasswordForm: public FormHandler {
+public:
+    PasswordForm(Authenticator &auth, TemplateRenderer &rdr, SMTPMailer &mailer) ;
+
+    bool validate(const ws::Request &vals) override ;
+
+    void onSuccess(const ws::Request &request) override;
+
+      void onGet(const ws::Request &request, ws::Response &response) override;
+
+private:
+    Authenticator &auth_ ;
+    TemplateRenderer &rdr_ ;
+    SMTPMailer &mailer_ ;
+};
+
+PasswordForm::PasswordForm(Authenticator &auth, TemplateRenderer &rdr, SMTPMailer &mailer): auth_(auth), rdr_(rdr), mailer_(mailer) {
+
+    field("email").alias("email")
+        .setNormalizer([&] (const string &val) {
+            return Authenticator::sanitizeUserName(val) ;
+        })
+        .addValidator<NonEmptyValidator>();
+
+    field("csrf_token").initial(auth_.token()) ;
+}
+
+bool PasswordForm::validate(const ws::Request &vals) {
+    if ( !FormHandler::validate(vals) ) return false ;
+
+    if ( !hashCompare(getValue("csrf_token"), auth_.token()) )
+        throw std::runtime_error("Security exception" ) ;
+
+    string name = getValue("email") ;
+
+    if ( !auth_.emailExists(name) ) {
+        errors_.push_back("There is no account with this email address") ;
+        return false ;
+    }
+
+    return true ;
+}
+
+void PasswordForm::onSuccess(const ws::Request &request) {
+   string email = getValue("email") ;
+   string url = auth_.makePasswordResetUrl(email) ;
+
+   SMTPMessage msg ;
+   msg.setFrom(MailAddress("malasiot@iti.gr")) ;
+   msg.addRecipient(MailAddress(email)) ;
+   msg.setSubject("Change password request") ;
+   msg.setBody("To change your password please click on the following link:\r\n: http://127.0.0.1:5000/user/reset?" + url) ;
+
+   mailer_.submit(msg) ;
+}
+
+void PasswordForm::onGet(const Request &request, Response &response) {
+    response.write(rdr_.render("password", {})) ;
+}
+
+
+class ResetPasswordForm: public FormHandler {
+public:
+    ResetPasswordForm(Authenticator &auth, TemplateRenderer &rdr) ;
+
+    bool validate(const ws::Request &vals) override ;
+
+    void onSuccess(const ws::Request &request) override;
+
+      void onGet(const ws::Request &request, ws::Response &response) override;
+
+private:
+    Authenticator &auth_ ;
+    TemplateRenderer &rdr_ ;
+
+};
+
+ResetPasswordForm::ResetPasswordForm(Authenticator &auth, TemplateRenderer &rdr): auth_(auth), rdr_(rdr) {
+    field("password").alias("password")
+        .setNormalizer([&] (const string &val) {
+            return Authenticator::sanitizePassword(val) ;
+        })
+        .addValidator<NonEmptyValidator>();
+
+    field("password_ver").alias("password_ver")
+        .setNormalizer([&] (const string &val) {
+            return Authenticator::sanitizePassword(val) ;
+        })
+        .addValidator<NonEmptyValidator>();
+
+    field("csrf_token").initial(auth_.token()) ;
+}
+
+bool ResetPasswordForm::validate(const ws::Request &vals) {
+    if ( !FormHandler::validate(vals) ) return false ;
+
+    if ( !hashCompare(getValue("csrf_token"), auth_.token()) )
+        throw std::runtime_error("Security exception" ) ;
+
+    string pass = getValue("password") ;
+    string pass_ver = getValue("password_ver") ;
+
+    if ( pass != pass_ver ) {
+        errors_.push_back("Passwords do not match") ;
+        return false ;
+    }
+
+    return true ;
+}
+
+void ResetPasswordForm::onSuccess(const ws::Request &request) {
+   string pass = getValue("password") ;
+
+   string id = request.getQueryAttribute("id") ;
+   string selector = request.getQueryAttribute("s") ;
+   string token = request.getQueryAttribute("t") ;
+
+   auth_.resetPassword(id, selector, token, pass) ;
+
+}
+
+void ResetPasswordForm::onGet(const Request &request, Response &response) {
+    response.write(rdr_.render("reset", {})) ;
+}
+
 bool LoginController::dispatch()
 {
     if ( ctx_.request_.matches("GET|POST", "/user/login/") ) login() ;
+    else if ( ctx_.request_.matches("GET|POST", "/user/password/") ) password() ;
+    else if ( ctx_.request_.matches("GET|POST", "/user/reset/") ) reset() ;
     else if ( ctx_.request_.matches("GET", "/user/activate/")) activate() ;
     else if ( ctx_.request_.matches("GET|POST", "/user/register/") ) reg() ;
     else if ( ctx_.request_.matches("POST", "/user/logout/") ) logout() ;
     else return false ;
     return true ;
 }
+
+
 
 void LoginController::login()
 {
@@ -181,6 +311,22 @@ void LoginController::reg()
 void LoginController::activate()
 {
     ctx_.user_.activate(ctx_.request_.getQueryAttribute("id"), ctx_.request_.getQueryAttribute("s"), ctx_.request_.getQueryAttribute("t")) ;
+}
+
+void LoginController::password()
+{
+    PasswordForm form(ctx_.user_, ctx_.engine_, mailer_) ;
+
+    form.handle(ctx_.request_, ctx_.response_) ;
+
+}
+
+void LoginController::reset()
+{
+    ResetPasswordForm form(ctx_.user_, ctx_.engine_) ;
+
+    form.handle(ctx_.request_, ctx_.response_) ;
+
 }
 
 

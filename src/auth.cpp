@@ -117,12 +117,27 @@ bool Authenticator::userNameExists(const string &name) {
     return repo_->userNameExists(name) ;
 }
 
+bool Authenticator::emailExists(const string &email)
+{
+    return repo_->userEmailExists(email) ;
+}
+
 bool Authenticator::activate(const string &id, const string &selector, const string &token)
 {
     return repo_->activate(id, selector, token) ;
 
 
 
+}
+
+string Authenticator::makePasswordResetUrl(const string &email)
+{
+    return repo_->makePasswordResetUrl(email) ;
+}
+
+bool Authenticator::resetPassword(const string &id, const string &selector, const string &token, const string &password)
+{
+    return repo_->resetPassword(id, selector, token, password) ;
 }
 
 
@@ -383,9 +398,34 @@ void UserRepository::fetchUserByName(const string &name, string &id, string &pas
 
 }
 
+string UserRepository::fetchUserByEmail(const string &email)
+{
+    QueryResult res = con_.query("SELECT u.id FROM users as u JOIN user_info as i ON i.user_id = u.id WHERE i.email = ? LIMIT 1;", email) ;
+
+    if ( res.next() ) {
+        return res.get<string>("id") ;
+    }
+
+    return string();
+}
+
+string UserRepository::makePasswordResetUrl(const string &email)
+{
+    string user_id = fetchUserByEmail(email) ;
+
+    string selector = encodeBase64(randomBytes(12)) ;
+    string token = randomBytes(24) ;
+    time_t expires 	= std::time(nullptr) + 3600; // Expire in 1 hour
+
+    addAuthToken(user_id, selector, binToHex(hashSHA256(token)), expires) ;
+
+    return "id=" + user_id + "&s=" + selector + "&t=" + encodeBase64(token) ;
+}
+
+
 
 bool UserRepository::userEmailExists(const string &email) {
-    QueryResult res = con_.query("SELECT id FROM 'users' WHERE email = ? LIMIT 1;", email) ;
+    QueryResult res = con_.query("SELECT user_id FROM 'user_info' WHERE email = ? LIMIT 1;", email) ;
     return res.next() ;
 }
 
@@ -414,6 +454,29 @@ bool UserRepository::activate(const string &id, const string &selector, const st
         if ( hash_equals(stored_token, cookie_token) ) {
             con_.execute("DELETE FROM auth_tokens WHERE user_id=? AND selector = ?", id, selector) ;
             con_.execute("UPDATE users SET enabled = 1 WHERE id=?", id) ;
+            return true ;
+        }
+    }
+
+
+    return false ;
+}
+
+bool UserRepository::resetPassword(const string &id, const string &selector, const string &token, const string &password) {
+    QueryResult res = con_.query(
+                "SELECT token FROM auth_tokens WHERE selector = ? AND user_id = ? AND expires > ? LIMIT 1",
+                selector, id, std::time(nullptr)) ;
+
+    if ( res.next() ) {
+
+        string btoken = decodeBase64(token) ;
+        string cookie_token = binToHex(hashSHA256(btoken)) ;
+        string stored_token = res.get<string>("token") ;
+
+        if ( hash_equals(stored_token, cookie_token) ) {
+            string secure_pass = encodeBase64(passwordHash(password)) ;
+            con_.execute("DELETE FROM auth_tokens WHERE user_id=? AND selector = ?", id, selector) ;
+            con_.execute("UPDATE users SET password =  ? WHERE id=?", secure_pass, id) ;
             return true ;
         }
     }
