@@ -6,20 +6,24 @@
 
 using namespace std ;
 using namespace ws ;
+using namespace twig ;
 
 class LoginForm: public FormHandler {
 public:
-    LoginForm(Authenticator &auth) ;
+    LoginForm(Authenticator &auth, TemplateRenderer &rdr) ;
 
     bool validate(const ws::Request &vals) override ;
 
     void onSuccess(const ws::Request &request) override;
 
+      void onGet(const ws::Request &request, ws::Response &response) override;
+
 private:
     Authenticator &auth_ ;
+    TemplateRenderer &rdr_ ;
 };
 
-LoginForm::LoginForm(Authenticator &auth): auth_(auth) {
+LoginForm::LoginForm(Authenticator &auth, TemplateRenderer &rdr): auth_(auth), rdr_(rdr) {
 
     field("username").alias("Username")
         .setNormalizer([&] (const string &val) {
@@ -69,6 +73,10 @@ void LoginForm::onSuccess(const ws::Request &request) {
 
     auth_.persist(username, remember_me) ;
 
+}
+
+void LoginForm::onGet(const Request &request, Response &response) {
+    response.write(rdr_.render("login", {})) ;
 }
 
 
@@ -158,16 +166,16 @@ bool LoginController::dispatch()
 
 void LoginController::login()
 {
-    LoginForm form(ctx_.user_) ;
+    LoginForm form(ctx_.user_, ctx_.engine_) ;
 
-    form.handle(ctx_.request_, ctx_.response_, ctx_.engine_) ;
+    form.handle(ctx_.request_, ctx_.response_) ;
 }
 
 void LoginController::reg()
 {
     RegisterForm form(ctx_.user_) ;
 
-    form.handle(ctx_.request_, ctx_.response_, ctx_.engine_) ;
+    form.handle(ctx_.request_, ctx_.response_) ;
 }
 
 void LoginController::activate()

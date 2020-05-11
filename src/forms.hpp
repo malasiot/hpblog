@@ -115,14 +115,16 @@ public:
 
     // override to perform special processing after a succesfull form validation (e.g. persistance)
     virtual void onSuccess(const ws::Request &request) {}
-    // override to perform special processing when a GET request is handled (usually init form from persistance)
-    virtual void onGet(const ws::Request &request) {}
+    // override to handle GET request (usually init form from persistance, rendering)
+    virtual void onGet(const ws::Request &request, ws::Response &response) {
+
+    }
 
     // Use this to avoid boilerplate in form request handling
     // When a POST request is recieved and succesfully validated then onSuccess function is called
     // When a GET request is received for initial rendering of the form then the onGet handler is called to initialize
     // the form
-    void handle(const ws::Request &req, ws::Response &response, twig::TemplateRenderer &engine) ;
+    void handle(const ws::Request &req, ws::Response &response) ;
 
 protected:
 

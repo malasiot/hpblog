@@ -23,7 +23,7 @@ public:
     PageUpdateForm(xdb::Connection &con, const std::string &id) ;
 
     void onSuccess(const ws::Request &request) override ;
-    void onGet(const ws::Request &request) override ;
+    void onGet(const ws::Request &request, ws::Response &) override ;
 
 private:
     xdb::Connection &con_ ;

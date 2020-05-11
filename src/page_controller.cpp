@@ -47,7 +47,7 @@ void PageUpdateForm::onSuccess(const Request &request) {
                  getValue("title"), getValue("slug"), id_) ;
 }
 
-void PageUpdateForm::onGet(const Request &request) {
+void PageUpdateForm::onGet(const Request &request, Response &response) {
 
     string id = request.getQueryAttribute("id") ;
 
@@ -57,6 +57,8 @@ void PageUpdateForm::onGet(const Request &request) {
 
     if ( res.next() )
         init(res.getAll()) ;
+
+    response.writeJSON(Variant(view()).toJSON());
 }
 
 
@@ -99,7 +101,7 @@ void PageController::create()
 {
     PageCreateForm form(con_) ;
 
-    form.handle(request_, response_, engine_) ;
+    form.handle(request_, response_) ;
 }
 
 void PageController::edit(const string &id)
@@ -134,7 +136,7 @@ void PageController::update()
 
     PageUpdateForm form(con_, id) ;
 
-    form.handle(request_, response_, engine_) ;
+    form.handle(request_, response_) ;
 }
 
 void PageController::remove()

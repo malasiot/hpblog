@@ -83,7 +83,7 @@ string FormHandler::getValue(const string &field_name)
 }
 
 
-void FormHandler::handle(const Request &request, Response &response, TemplateRenderer &engine)
+void FormHandler::handle(const Request &request, Response &response)
 {
     if ( request.getMethod() == "POST" ) {
 
@@ -98,8 +98,8 @@ void FormHandler::handle(const Request &request, Response &response, TemplateRen
         }
     }
     else {
-        onGet(request) ;
-        response.writeJSON(Variant(view()).toJSON());
+        onGet(request, response) ;
+
     }
 }
 
