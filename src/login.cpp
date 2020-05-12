@@ -2,6 +2,7 @@
 
 #include <ws/crypto.hpp>
 #include <ws/mailer.hpp>
+#include <ws/client.hpp>
 
 #include "forms.hpp"
 
@@ -182,6 +183,21 @@ PasswordForm::PasswordForm(Authenticator &auth, TemplateRenderer &rdr, SMTPMaile
     field("csrf_token").initial(auth_.token()) ;
 }
 
+static bool verify_captcha(const string &response) {
+    HttpClient c ;
+
+    auto r = c.post("https://www.google.com/recaptcha/api/siteverify",
+    {{"response", response}, {"secret", "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"}}) ;
+
+    if ( r.getStatus() == Response::ok ) {
+        string content = r.content() ;
+        twig::Variant v = twig::Variant::fromJSONString(content) ;
+        return  ( v["success"].toBoolean() ) ;
+    }
+
+    return false ;
+}
+
 bool PasswordForm::validate(const ws::Request &vals) {
     if ( !FormHandler::validate(vals) ) return false ;
 
@@ -190,10 +206,18 @@ bool PasswordForm::validate(const ws::Request &vals) {
 
     string name = getValue("email") ;
 
+    string captcha = vals.getPostAttribute("g-recaptcha-response") ;
+
     if ( !auth_.emailExists(name) ) {
         errors_.push_back("There is no account with this email address") ;
         return false ;
     }
+
+    if ( !verify_captcha(captcha) ) {
+        errors_.push_back("reCAPTCHA validation failed") ;
+        return false ;
+    }
+
 
     return true ;
 }
