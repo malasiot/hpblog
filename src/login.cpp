@@ -39,7 +39,7 @@ LoginForm::LoginForm(Authenticator &auth, TemplateRenderer &rdr): auth_(auth), r
         })
         .addValidator<NonEmptyValidator>() ;
 
-    field("csrf_token").initial(auth_.token()) ;
+     field("csrf_token").initial(auth_.token()) ;
 
     field("remember-me").alias("Remember Me:") ;
 }

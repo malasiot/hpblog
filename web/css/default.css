@@ -70,6 +70,25 @@ used to vertically center elements, may need modification if you're not using de
     width: 350px;
 }
 
+#login-dp{
+    min-width: 250px;
+    padding: 14px;
+    overflow:hidden;
+    background-color:rgba(255,255,255,.8);
+}
+
+#login-dp .bottom{
+    background-color:rgba(255,255,255,.8);
+    border-top:1px solid #ddd;
+    clear:both;
+    padding:14px;
+}
+
+#login-dp .form-group {
+    margin-bottom: 10px;
+}
+
+
 .form-signin
 {
     padding: 15px;

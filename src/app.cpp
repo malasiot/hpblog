@@ -111,6 +111,9 @@ public:
         catch ( std::runtime_error &e ) {
             cout << e.what() << endl ;
             resp.stockReply(Response::internal_server_error) ;
+        }catch ( twig::TemplateCompileException &e ) {
+            cout << e.what() << endl ;
+            resp.stockReply(Response::internal_server_error) ;
         }
     }
 

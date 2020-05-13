@@ -1,11 +1,9 @@
 $(function() {
 
-/*
-	$("#login").click(function(e) {
-		e.preventDefault() ;
-		$("#login-modal").formModal('show', {url: 'user/login',  onSuccess: function() { location.reload(false); }}) ;
-	}) ;
-*/
+
+	$("#login-form").form({url: 'user/login',  onSuccess: function() { location.reload(false); }}) ;
+
+
 	$("#register").click(function(e) {
 		e.preventDefault() ;
 		$("#register-modal").formModal('show', {url: 'user/register',  onSuccess: function() { location.reload(false); }}) ;
