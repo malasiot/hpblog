@@ -1,0 +1,25 @@
+{% extends 'headless-layout' %}
+
+
+{% block contents %}
+<div class="col-md-4 col-md-offset-4">
+{% if success %}
+	<div class="alert alert-success" role="alert">
+	  	<h4 class="alert-heading">Account creation successful!</h4>
+	  	<p>Your account has been activated.</p>
+	  	<hr>
+		<a href="" class="card-link">Home</a>
+	</div>
+{% else %}
+	<div class="alert alert-error" role="alert">
+	  	<h4 class="alert-heading">Account creation failed!</h4>
+	  	<p>An error occured while created your account.</p>
+	  	<hr>
+		<a href="" class="card-link">Home</a>
+	</div>
+
+{% endif %}	
+</div>
+
+{% endblock %}
+

@@ -6,73 +6,17 @@
 // a user model that handles authentication via username and password stored in database and authroization via role/permission models
 
 /*
- * CREATE TABLE users ( id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, password TEXT NOT NULL );
+ * CREATE TABLE users ( id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL,  email TEXT UNIQUE NOT NULL, password TEXT NOT NULL );
  * CREATE TABLE auth_tokens ( id INTEGER PRIMARY KEY AUTOINCREMENT, selector TEXT, token TEXT, user_id INTEGER NOT NULL, expires INTEGER );
  * CREATE TABLE user_roles ( id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, role_id TEXT );
  */
 
 class AuthorizationModel ;
-
-struct User {
-    int64_t id_ ;
-    std::string email_, name_, password_ ;
-    std::vector<std::string> roles_ ;
-};
-
-class UserProvider {
-public:
-    UserProvider() = default ;
-
-} ;
-
-class UserRepository: public UserProvider {
-public:
-    UserRepository(xdb::Connection &con, const std::string &table_prefix = std::string()): con_(con), prefix_(table_prefix) {
-        create() ;
-    }
-
-    void createUser(const std::string &email, const std::string &username, const std::string &password, const std::string &role, std::string &activation_url) ;
-
-    // check database for username
-    bool userNameExists(const std::string &username) ;
-
-    bool userEmailExists(const std::string &email) ;
-
-    void updatePassword(const std::string &email, const std::string &password) ;
-    void updateRole(const std::string &email, const std::string &role) ;
-
-    void removeExpiredTokens() ;
-    void addAuthToken(const std::string &id, const std::string &selector, const std::string &token, time_t expires) ;
-    void updateLastSignIn(const std::string &id, time_t t) ;
-    void removeAuthToken(const std::string &user_id) ;
-    bool rememberUser(const std::string &selector, const std::string &token,
-                      std::string &user_id, std::string &user_name, std::string &user_role) ;
-
-    void fetchUserByName(const std::string &name,
-                          std::string &id,
-                         std::string &password, std::string &role);
-    bool activate(const std::string &id, const std::string &selector, const std::string &token);
-
-    std::string makePasswordResetUrl(const std::string &email) ;
-    bool resetPassword(const std::string &id, const std::string &selector, const std::string &token, const std::string &password);
-
-private:
-
-    void create() ;
-
-    std::string fetchUserByEmail(const std::string &email);
-
-
-private:
-
-    xdb::Connection &con_ ;
-    std::string prefix_ ;
-};
-
 class Authenticator {
 public:
-    Authenticator(UserRepository *repo, ws::Session &session, const ws::Request &req, ws::Response &res):
-        repo_(repo), session_(session), request_(req), response_(res) {
+    Authenticator(xdb::Connection &con, ws::Session &session, const ws::Request &req, ws::Response &res, const std::string &table_prefix = std::string()):
+        con_(con), session_(session), request_(req), response_(res), prefix_(table_prefix) {
+        createDB() ;
     }
 
     enum AuthResult { OK, USER_NAME_NOT_FOUND, PASSWORD_MISMATCH } ;
@@ -97,7 +41,7 @@ public:
     static std::string sanitizeUserName(const std::string &username);
     static std::string sanitizePassword(const std::string &password);
 
-    void create(const std::string &username, const std::string &email, const std::string &password, const std::string &role,
+    void createUser(const std::string &username, const std::string &email, const std::string &password, const std::string &role,
                 std::string &activation_url) ;
 
     void updatePassword(const std::string &id, const std::string &password) ;
@@ -114,6 +58,25 @@ public:
     bool resetPassword(const std::string &id, const std::string &selector, const std::string &token,
                        const std::string &password) ;
 
+
+
+    bool userEmailExists(const std::string &email) ;
+
+    void updateRole(const std::string &email, const std::string &role) ;
+
+
+    void addAuthToken(const std::string &id, const std::string &selector, const std::string &token, time_t expires) ;
+    void updateLastSignIn(const std::string &id, time_t t) ;
+    void removeAuthToken(const std::string &user_id) ;
+    bool rememberUser(const std::string &selector, const std::string &token,
+                      std::string &user_id, std::string &user_name, std::string &user_role) const ;
+
+    void fetchUserByName(const std::string &name,
+                          std::string &id,
+                         std::string &password, std::string &role);
+
+    std::string fetchUserByEmail(const std::string &email);
+
 protected:
 
     // verify query password against the one stored in database
@@ -127,12 +90,19 @@ protected:
 
     void persistUser(const std::string &username, const std::string &id, const std::string &role, bool remember_me = false) ;
 
+    void removeExpiredTokens() ;
+
+
+    void createDB() ;
+
 protected:
 
-    UserRepository *repo_ ;
+
     ws::Session &session_ ;
     ws::Response &response_ ;
     const ws::Request &request_ ;
+    xdb::Connection &con_ ;
+    std::string prefix_ ;
 } ;
 
 class AuthorizationModel {

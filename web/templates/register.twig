@@ -1,0 +1,70 @@
+{% extends 'headless-layout' %}
+
+
+{% block contents %}
+<div class="col-md-4 col-md-offset-4">
+   <div class="panel panel-default">
+       <div class="panel-body">
+           <div class="text-center">
+               <h3><i class="fa fa-lock fa-4x"></i></h3>
+               <h2 class="text-center">Sign Up</h2>
+               <p>Create new account</p>
+               <div class="panel-body" id="registration-form">
+		{% import 'bs3-forms' as forms %}
+		{{ forms.start() }}
+			{{ forms.input('username', type='text', placeholder='Username', required = true) }}
+			{{ forms.input('email', type='text', placeholder='E-mail', required = true) }}
+			{{ forms.input('password', type='password', placeholder='Password', required = true) }}
+			{{ forms.input('password_ver', type='password', placeholder='Verify Password', required = true) }}
+                    
+			<div class="form-group">
+				<div class="g-recaptcha" data-sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"></div>
+			</div>
+
+                      <div class="form-group">
+                        <input name="submit" class="btn btn-lg btn-primary btn-block" value="Register" type="submit">
+                      </div>
+
+				{{ forms.end() }}
+                </div>
+           </div>
+      </div>
+   </div>
+</div>
+
+
+<!-- Modal -->
+  <div class="modal fade" id="msg" role="dialog">
+    <div class="modal-dialog">
+    
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title">Create Account Request</h4>
+        </div>
+        <div class="modal-body">
+          <p>An account activation e-mail was sent to your address.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+{% endblock %}
+
+{% block extra_footers %}
+<script>
+$('#msg').on('hidden.bs.modal', function () {
+    location.assign('') ;});
+
+$("#registration-form").form({ url: "user/register/", onSuccess: function() { 
+	$("#msg").modal("show")
+}}) ;
+
+</script>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+{% endblock %}

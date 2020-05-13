@@ -79,14 +79,12 @@ public:
 
             Connection con("sqlite:db=" + root_ + "/blog.sqlite") ; // establish connection with database
 
-            UserRepository users(con) ;
-
             AppContext ctx(con, session, req, resp, engine_) ;
 
             DefaultAuthorizationModel auth(Variant::fromJSONFile(root_ + "templates/acm.json")) ;
 
-            UserRepository repo(con) ;
-            Authenticator user(&repo, session, req, resp) ; // setup authentication
+
+            Authenticator user(con, session, req, resp) ; // setup authentication
 
             PageView page(user, Variant::fromJSONFile(root_ + "templates/menu.json")) ; // global page data
 
@@ -108,10 +106,11 @@ public:
 
             resp.stockReply(e.code_) ;
         }
-        catch ( std::runtime_error &e ) {
+        catch ( twig::TemplateCompileException &e ) {
             cout << e.what() << endl ;
             resp.stockReply(Response::internal_server_error) ;
-        }catch ( twig::TemplateCompileException &e ) {
+        }
+        catch ( std::runtime_error &e ) {
             cout << e.what() << endl ;
             resp.stockReply(Response::internal_server_error) ;
         }

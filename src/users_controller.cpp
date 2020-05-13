@@ -37,7 +37,7 @@ public:
         string role = getValue("role") ;
 
         string url ;
-        user_.create(email, username, password, role, url) ;
+        user_.createUser(email, username, password, role, url) ;
     }
 
 private:

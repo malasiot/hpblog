@@ -84,17 +84,20 @@ void LoginForm::onGet(const Request &request, Response &response) {
 
 class RegisterForm: public FormHandler {
 public:
-    RegisterForm(Authenticator &auth) ;
+    RegisterForm(Authenticator &auth, TemplateRenderer &engine, SMTPMailer &mailer) ;
 
     bool validate(const ws::Request &vals) override ;
 
     void onSuccess(const ws::Request &request) override;
 
+     void onGet(const ws::Request &request, ws::Response &resp) override;
+
 private:
     Authenticator &auth_ ;
+    TemplateRenderer &engine_ ;
+    SMTPMailer &mailer_ ;
 };
-
-RegisterForm::RegisterForm(Authenticator &auth): auth_(auth) {
+RegisterForm::RegisterForm(Authenticator &auth, TemplateRenderer &rdr, SMTPMailer &mailer): auth_(auth), engine_(rdr), mailer_(mailer) {
 
     field("username").alias("Username")
         .setNormalizer([&] (const string &val) {
@@ -123,6 +126,22 @@ RegisterForm::RegisterForm(Authenticator &auth): auth_(auth) {
     field("csrf_token").initial(auth_.token()) ;
 }
 
+
+static bool verify_captcha(const string &response) {
+    HttpClient c ;
+
+    auto r = c.post("https://www.google.com/recaptcha/api/siteverify",
+    {{"response", response}, {"secret", "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"}}) ;
+
+    if ( r.getStatus() == Response::ok ) {
+        string content = r.content() ;
+        twig::Variant v = twig::Variant::fromJSONString(content) ;
+        return  ( v["success"].toBoolean() ) ;
+    }
+
+    return false ;
+}
+
 bool RegisterForm::validate(const ws::Request &vals) {
     if ( !FormHandler::validate(vals) ) return false ;
 
@@ -144,6 +163,18 @@ bool RegisterForm::validate(const ws::Request &vals) {
         return false ;
     }
 
+    string captcha = vals.getPostAttribute("g-recaptcha-response") ;
+
+    if ( auth_.userEmailExists(name) ) {
+        errors_.push_back("The email address already exists") ;
+        return false ;
+    }
+
+    if ( !verify_captcha(captcha) ) {
+        errors_.push_back("reCAPTCHA validation failed") ;
+        return false ;
+    }
+
     return true ;
 }
 
@@ -153,7 +184,19 @@ void RegisterForm::onSuccess(const ws::Request &request) {
     string email = getValue("email") ;
     string url ;
 
-    auth_.create(username, email, password, "user", url) ;
+    auth_.createUser(username, email, password, "user", url) ;
+
+    SMTPMessage msg ;
+    msg.setFrom(MailAddress("malasiot@iti.gr")) ;
+    msg.addRecipient(MailAddress(email)) ;
+    msg.setSubject("Account activation request") ;
+    msg.setBody("To activate your account please click on the following link:\r\n: http://127.0.0.1:5000/user/activate?" + url) ;
+
+    mailer_.submit(msg) ;
+}
+
+void RegisterForm::onGet(const Request &request, Response &response) {
+    response.write(engine_.render("register", {})) ;
 }
 
 class PasswordForm: public FormHandler {
@@ -183,20 +226,6 @@ PasswordForm::PasswordForm(Authenticator &auth, TemplateRenderer &rdr, SMTPMaile
     field("csrf_token").initial(auth_.token()) ;
 }
 
-static bool verify_captcha(const string &response) {
-    HttpClient c ;
-
-    auto r = c.post("https://www.google.com/recaptcha/api/siteverify",
-    {{"response", response}, {"secret", "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"}}) ;
-
-    if ( r.getStatus() == Response::ok ) {
-        string content = r.content() ;
-        twig::Variant v = twig::Variant::fromJSONString(content) ;
-        return  ( v["success"].toBoolean() ) ;
-    }
-
-    return false ;
-}
 
 bool PasswordForm::validate(const ws::Request &vals) {
     if ( !FormHandler::validate(vals) ) return false ;
@@ -208,7 +237,7 @@ bool PasswordForm::validate(const ws::Request &vals) {
 
     string captcha = vals.getPostAttribute("g-recaptcha-response") ;
 
-    if ( !auth_.emailExists(name) ) {
+    if ( !auth_.userEmailExists(name) ) {
         errors_.push_back("There is no account with this email address") ;
         return false ;
     }
@@ -327,14 +356,15 @@ void LoginController::login()
 
 void LoginController::reg()
 {
-    RegisterForm form(ctx_.user_) ;
+    RegisterForm form(ctx_.user_, ctx_.engine_, mailer_) ;
 
     form.handle(ctx_.request_, ctx_.response_) ;
 }
 
 void LoginController::activate()
 {
-    ctx_.user_.activate(ctx_.request_.getQueryAttribute("id"), ctx_.request_.getQueryAttribute("s"), ctx_.request_.getQueryAttribute("t")) ;
+    bool res = ctx_.user_.activate(ctx_.request_.getQueryAttribute("id"), ctx_.request_.getQueryAttribute("s"), ctx_.request_.getQueryAttribute("t")) ;
+    ctx_.response_.write(ctx_.engine_.render("activate", {{ "success", res}})) ;
 }
 
 void LoginController::password()
