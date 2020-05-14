@@ -8,7 +8,7 @@
 
 class LoginController {
 public:
-    LoginController(PageContext &ctx, ws::SMTPMailer &mailer):  ctx_(ctx), mailer_(mailer) {}
+    LoginController(PageContext &ctx):  ctx_(ctx) {}
 
     bool dispatch() ;
     void login() ;
@@ -19,7 +19,6 @@ public:
     void reset() ;
 private:
     PageContext &ctx_ ;
-    ws::SMTPMailer &mailer_ ;
 };
 
 #endif

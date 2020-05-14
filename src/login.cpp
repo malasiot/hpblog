@@ -84,7 +84,7 @@ void LoginForm::onGet(const Request &request, Response &response) {
 
 class RegisterForm: public FormHandler {
 public:
-    RegisterForm(Authenticator &auth, TemplateRenderer &engine, SMTPMailer &mailer) ;
+    RegisterForm(Authenticator &auth, TemplateRenderer &engine, const Variant &mailer_config) ;
 
     bool validate(const ws::Request &vals) override ;
 
@@ -95,9 +95,9 @@ public:
 private:
     Authenticator &auth_ ;
     TemplateRenderer &engine_ ;
-    SMTPMailer &mailer_ ;
+    const Variant &mailer_config_ ;
 };
-RegisterForm::RegisterForm(Authenticator &auth, TemplateRenderer &rdr, SMTPMailer &mailer): auth_(auth), engine_(rdr), mailer_(mailer) {
+RegisterForm::RegisterForm(Authenticator &auth, TemplateRenderer &rdr, const Variant &mailer_config): auth_(auth), engine_(rdr), mailer_config_(mailer_config) {
 
     field("username").alias("Username")
         .setNormalizer([&] (const string &val) {
@@ -186,13 +186,16 @@ void RegisterForm::onSuccess(const ws::Request &request) {
 
     auth_.createUser(username, email, password, "user", url) ;
 
+    SMTPMailer mailer(mailer_config_["address"].toString(), mailer_config_["port"].toInteger()) ;
+    mailer.authenticate(mailer_config_["username"].toString(), mailer_config_["password"].toString(), SMTPMailer::auth_method_t::START_TLS) ;
+
     SMTPMessage msg ;
     msg.setFrom(MailAddress("malasiot@iti.gr")) ;
     msg.addRecipient(MailAddress(email)) ;
     msg.setSubject("Account activation request") ;
     msg.setBody("To activate your account please click on the following link:\r\n: http://127.0.0.1:5000/user/activate?" + url) ;
 
-    mailer_.submit(msg) ;
+    mailer.submit(msg) ;
 }
 
 void RegisterForm::onGet(const Request &request, Response &response) {
@@ -201,7 +204,7 @@ void RegisterForm::onGet(const Request &request, Response &response) {
 
 class PasswordForm: public FormHandler {
 public:
-    PasswordForm(Authenticator &auth, TemplateRenderer &rdr, SMTPMailer &mailer) ;
+    PasswordForm(Authenticator &auth, TemplateRenderer &rdr, const Variant &mailer_config) ;
 
     bool validate(const ws::Request &vals) override ;
 
@@ -212,10 +215,10 @@ public:
 private:
     Authenticator &auth_ ;
     TemplateRenderer &rdr_ ;
-    SMTPMailer &mailer_ ;
+    const Variant &mailer_config_ ;
 };
 
-PasswordForm::PasswordForm(Authenticator &auth, TemplateRenderer &rdr, SMTPMailer &mailer): auth_(auth), rdr_(rdr), mailer_(mailer) {
+PasswordForm::PasswordForm(Authenticator &auth, TemplateRenderer &rdr, const Variant &mailer_config): auth_(auth), rdr_(rdr), mailer_config_(mailer_config) {
 
     field("email").alias("email")
         .setNormalizer([&] (const string &val) {
@@ -255,13 +258,16 @@ void PasswordForm::onSuccess(const ws::Request &request) {
    string email = getValue("email") ;
    string url = auth_.makePasswordResetUrl(email) ;
 
+   SMTPMailer mailer(mailer_config_["address"].toString(), mailer_config_["port"].toInteger()) ;
+   mailer.authenticate(mailer_config_["username"].toString(), mailer_config_["password"].toString(), SMTPMailer::auth_method_t::START_TLS) ;
+
    SMTPMessage msg ;
    msg.setFrom(MailAddress("malasiot@iti.gr")) ;
    msg.addRecipient(MailAddress(email)) ;
    msg.setSubject("Change password request") ;
    msg.setBody("To change your password please click on the following link:\r\n: http://127.0.0.1:5000/user/reset?" + url) ;
 
-   mailer_.submit(msg) ;
+   mailer.submit(msg) ;
 }
 
 void PasswordForm::onGet(const Request &request, Response &response) {
@@ -356,7 +362,7 @@ void LoginController::login()
 
 void LoginController::reg()
 {
-    RegisterForm form(ctx_.user_, ctx_.engine_, mailer_) ;
+    RegisterForm form(ctx_.user_, ctx_.engine_, ctx_.config_["mailer"]) ;
 
     form.handle(ctx_.request_, ctx_.response_) ;
 }
@@ -369,7 +375,7 @@ void LoginController::activate()
 
 void LoginController::password()
 {
-    PasswordForm form(ctx_.user_, ctx_.engine_, mailer_) ;
+    PasswordForm form(ctx_.user_, ctx_.engine_, ctx_.config_["mailer"]) ;
 
     form.handle(ctx_.request_, ctx_.response_) ;
 

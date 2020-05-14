@@ -14,14 +14,16 @@ using Dictionary = std::map<std::string, std::string>;
 struct AppContext {
     AppContext(xdb::Connection &con, ws::Session &session,
                const ws::Request &request, ws::Response &response,
-               twig::TemplateRenderer &engine):
-        con_(con), session_(session), request_(request), response_(response), engine_(engine) {}
+               twig::TemplateRenderer &engine, const twig::Variant &config):
+        con_(con), session_(session), request_(request), response_(response), engine_(engine), config_(config) {}
 
     xdb::Connection &con_ ;
     ws::Session &session_ ;
     const ws::Request &request_ ;
     ws::Response &response_ ;
     twig::TemplateRenderer &engine_ ;
+    const twig::Variant &config_ ;
+
 };
 
 struct PageContext: public AppContext {

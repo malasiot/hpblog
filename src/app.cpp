@@ -61,12 +61,12 @@ class App: public RequestHandler {
     using Dictionary = map<string, string>;
 public:
 
-    App(const std::string &root_dir, SMTPMailer &mailer):
-        root_(root_dir), mailer_(mailer),
-        engine_(std::shared_ptr<TemplateLoader>(new FileSystemTemplateLoader({{root_ + "/templates/"}, {root_ + "/templates/bootstrap-partials/"}})))
-    {
-        engine_.setCaching(false) ;
+    App(const Variant &config): config_(config) {
+        root_ = config["server"]["root"].toString() ;
 
+        engine_.reset(
+                    new TemplateRenderer(std::shared_ptr<TemplateLoader>(new FileSystemTemplateLoader({{root_ + "/templates/"}, {root_ + "/templates/bootstrap-partials/"}}))));
+        engine_->setCaching(false) ;
     }
 
     void handle(const Request &req, Response &resp) override {
@@ -79,7 +79,7 @@ public:
 
             Connection con("sqlite:db=" + root_ + "/blog.sqlite") ; // establish connection with database
 
-            AppContext ctx(con, session, req, resp, engine_) ;
+            AppContext ctx(con, session, req, resp, *engine_, config_) ;
 
             DefaultAuthorizationModel auth(Variant::fromJSONFile(root_ + "templates/acm.json")) ;
 
@@ -94,7 +94,7 @@ public:
 
             if ( PageController(page_ctx).dispatch() ) return ;
             if ( UsersController(page_ctx).dispatch() ) return ;
-            if ( LoginController(page_ctx, mailer_).dispatch() ) return ;
+            if ( LoginController(page_ctx).dispatch() ) return ;
 
             if ( resp.serveStaticFile(root_, req.getPath()) ) {
                 return ;
@@ -122,23 +122,32 @@ public:
 
 private:
 
+    const Variant &config_ ;
     string root_ ;
-    TemplateRenderer engine_ ;
+    std::unique_ptr<TemplateRenderer> engine_ ;
     std::unique_ptr<SessionManager> session_manager_ ;
-    SMTPMailer &mailer_ ;
 };
 
 
 int main(int argc, char *argv[]) {
 
-    HttpServer server("127.0.0.1", "5000") ;
+    if ( argc < 2 ) {
+        cout << "Usage: app <config_file>" << endl ;
+        exit(1) ;
+    }
 
-    const string root = "/home/malasiot/source/hpblog/web/" ;
+    Variant config = Variant::fromJSONFile(argv[1]) ;
 
-    SMTPMailer c("smtp.gmail.com", 587) ;
-    c.authenticate(argv[1], argv[2], ws::SMTPMailer::auth_method_t::START_TLS) ;
+    if ( config.isUndefined() ) {
+        cerr << "Cannot read configuration file" << endl ;
+        exit(1) ;
+    }
 
-    App *app = new App(root, c) ;
+    HttpServer server(config["server"]["listen"].toString()) ;
+
+    const string root = config["server"]["root"].toString() ;
+
+    App *app = new App(config) ;
 
     app->setSessionManager(new SQLite3SessionManager("/tmp/session.sqlite")) ;
 
