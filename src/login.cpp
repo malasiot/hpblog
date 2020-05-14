@@ -165,7 +165,7 @@ bool RegisterForm::validate(const ws::Request &vals) {
 
     string captcha = vals.getPostAttribute("g-recaptcha-response") ;
 
-    if ( auth_.userEmailExists(name) ) {
+    if ( auth_.userEmailExists(email) ) {
         errors_.push_back("The email address already exists") ;
         return false ;
     }
